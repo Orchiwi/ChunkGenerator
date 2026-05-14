@@ -43,4 +43,4 @@ jobs:
       - name: Publish to Modrinth
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-        run: ./gradlew modrinth --no-daemon --stacktrace
+        run: ./gradlew modrinth --no-daemon --no-configuration-cache --stacktrace
