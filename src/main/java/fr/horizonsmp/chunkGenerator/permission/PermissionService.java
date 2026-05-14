@@ -11,6 +11,7 @@ public final class PermissionService {
     public static final String ADMIN = "chunkgenerator.admin";
     public static final String COMMAND_START = "chunkgenerator.command.start";
     public static final String COMMAND_STOP = "chunkgenerator.command.stop";
+    public static final String COMMAND_RESUME = "chunkgenerator.command.resume";
     public static final String COMMAND_CANCEL = "chunkgenerator.command.cancel";
     public static final String COMMAND_STATUS = "chunkgenerator.command.status";
     public static final String COMMAND_LIST = "chunkgenerator.command.list";
@@ -40,6 +41,10 @@ public final class PermissionService {
         return sender.hasPermission(COMMAND_STOP) || sender.hasPermission(ADMIN);
     }
 
+    public boolean canResume(CommandSender sender) {
+        return sender.hasPermission(COMMAND_RESUME) || sender.hasPermission(ADMIN);
+    }
+
     public boolean canCancel(CommandSender sender) {
         return sender.hasPermission(COMMAND_CANCEL) || sender.hasPermission(ADMIN);
     }
@@ -57,7 +62,7 @@ public final class PermissionService {
     }
 
     public boolean canUseAnyCommand(CommandSender sender) {
-        return canStart(sender) || canStop(sender) || canCancel(sender)
+        return canStart(sender) || canStop(sender) || canResume(sender) || canCancel(sender)
                 || canStatus(sender) || canList(sender) || canReload(sender);
     }
 }

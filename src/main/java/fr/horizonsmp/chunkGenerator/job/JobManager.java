@@ -106,6 +106,22 @@ public final class JobManager {
         return true;
     }
 
+    public ResumeResult resume(String worldName) {
+        GenerationJob job = jobs.get(worldName);
+        if (job == null) {
+            return ResumeResult.failure("no-job");
+        }
+        JobStatus current = job.status();
+        if (current == JobStatus.RUNNING) {
+            return ResumeResult.failure("already-running");
+        }
+        if (current == JobStatus.COMPLETED || current == JobStatus.CANCELLED) {
+            return ResumeResult.failure("terminal");
+        }
+        job.start();
+        return ResumeResult.ok(job);
+    }
+
     public boolean cancel(String worldName) {
         GenerationJob job = jobs.remove(worldName);
         if (job == null) {
@@ -163,6 +179,16 @@ public final class JobManager {
 
         public static StartResult failure(String error) {
             return new StartResult(false, error, null);
+        }
+    }
+
+    public record ResumeResult(boolean ok, String error, GenerationJob job) {
+        public static ResumeResult ok(GenerationJob job) {
+            return new ResumeResult(true, null, job);
+        }
+
+        public static ResumeResult failure(String error) {
+            return new ResumeResult(false, error, null);
         }
     }
 }

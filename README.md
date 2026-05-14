@@ -50,6 +50,7 @@ The first run drops a Paper server in `run/`; accept the EULA in
 |---|---|
 | `/cg start <world> <shape> <size> [centerX centerZ]` | Start a job. `shape` ∈ `square\|circle\|rectangle`. For square/circle `size` is the radius in blocks; for rectangle pass `<halfWidth> <halfLength>`. |
 | `/cg stop <world>` | Pause a running job (state preserved on disk). |
+| `/cg resume <world>` | Resume a paused job from where it left off. |
 | `/cg cancel <world>` | Cancel a job and remove its state file. |
 | `/cg status [world]` | Show a snapshot of progress, speed, ETA, TPS, CPU and RAM. |
 | `/cg list` | List all known jobs (running and paused). |
@@ -65,6 +66,7 @@ Alias: `/chunkgen`.
 | `chunkgenerator.admin` | op | Parent: grants every child below. |
 | `chunkgenerator.command.start` | op | Start jobs. |
 | `chunkgenerator.command.stop` | op | Pause jobs. |
+| `chunkgenerator.command.resume` | op | Resume paused jobs. |
 | `chunkgenerator.command.cancel` | op | Cancel jobs. |
 | `chunkgenerator.command.status` | op | Query job status. |
 | `chunkgenerator.command.list` | op | List jobs. |

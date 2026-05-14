@@ -29,7 +29,7 @@ import java.util.UUID;
 
 public final class ChunkGeneratorCommand implements CommandExecutor, TabCompleter {
 
-    private static final List<String> ROOT_SUBS = List.of("start", "stop", "cancel", "status", "list", "reload", "help");
+    private static final List<String> ROOT_SUBS = List.of("start", "stop", "resume", "cancel", "status", "list", "reload", "help");
     private static final List<String> SHAPES = List.of("square", "circle", "rectangle");
     private static final int MAX_HALF_BLOCKS = 50_000;
 
@@ -61,6 +61,7 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "start" -> handleStart(sender, label, args);
             case "stop" -> handleStop(sender, label, args);
+            case "resume" -> handleResume(sender, label, args);
             case "cancel" -> handleCancel(sender, label, args);
             case "status" -> handleStatus(sender, args);
             case "list" -> handleList(sender);
@@ -212,6 +213,33 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
                 Map.of("world", worldName)));
     }
 
+    private void handleResume(CommandSender sender, String label, String[] args) {
+        if (!permissions.canResume(sender)) {
+            sender.sendMessage(messages.get("command.no-permission"));
+            return;
+        }
+        if (args.length < 2) {
+            sender.sendMessage(messages.get("command.resume.usage", Map.of("label", label)));
+            return;
+        }
+        String worldName = args[1];
+        JobManager.ResumeResult result = jobs.resume(worldName);
+        if (!result.ok()) {
+            String key = switch (result.error()) {
+                case "already-running" -> "command.resume.already-running";
+                case "terminal" -> "command.resume.completed";
+                default -> "command.resume.no-job";
+            };
+            sender.sendMessage(messages.get(key, Map.of("world", worldName, "label", label)));
+            return;
+        }
+        sender.sendMessage(messages.get("command.resume.resumed",
+                Map.of("world", worldName)));
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            plugin.statsDisplay().onPlayerJoin(p);
+        }
+    }
+
     private void handleCancel(CommandSender sender, String label, String[] args) {
         if (!permissions.canCancel(sender)) {
             sender.sendMessage(messages.get("command.no-permission"));
@@ -329,6 +357,7 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
         sender.sendMessage(messages.get("command.help.header"));
         sender.sendMessage(messages.get("command.help.start", placeholders));
         sender.sendMessage(messages.get("command.help.stop", placeholders));
+        sender.sendMessage(messages.get("command.help.resume", placeholders));
         sender.sendMessage(messages.get("command.help.cancel", placeholders));
         sender.sendMessage(messages.get("command.help.status", placeholders));
         sender.sendMessage(messages.get("command.help.list", placeholders));
@@ -348,7 +377,7 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (args.length == 2 && (sub.equals("start") || sub.equals("stop")
-                || sub.equals("cancel") || sub.equals("status"))) {
+                || sub.equals("resume") || sub.equals("cancel") || sub.equals("status"))) {
             List<String> worldNames = new ArrayList<>();
             for (World w : Bukkit.getWorlds()) {
                 worldNames.add(w.getName());

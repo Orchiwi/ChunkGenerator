@@ -30,6 +30,13 @@ command:
     not-running: "&7No active job for world &e{world}&7."
     stopped: "&eJob for &e{world}&e paused."
 
+  resume:
+    usage: "&cUsage: &e/{label} resume <world>"
+    no-job: "&7No paused job for world &e{world}&7. Use &e/{label} start&7 to create one."
+    already-running: "&7Job for world &e{world}&7 is already running."
+    completed: "&7Job for world &e{world}&7 is already finished."
+    resumed: "&aResumed job for &e{world}&a."
+
   cancel:
     usage: "&cUsage: &e/{label} cancel <world>"
     no-job: "&7No job to cancel for world &e{world}&7."
@@ -55,6 +62,7 @@ command:
     header: "&8&m            &r &bChunkGenerator commands &8&m            "
     start: "&e/{label} start <world> <shape> <size> &8- &7Start a pre-generation job"
     stop: "&e/{label} stop <world> &8- &7Pause a job (state preserved)"
+    resume: "&e/{label} resume <world> &8- &7Resume a paused job"
     cancel: "&e/{label} cancel <world> &8- &7Cancel and discard a job"
     status: "&e/{label} status [world] &8- &7Show job snapshot"
     list: "&e/{label} list &8- &7List all jobs"

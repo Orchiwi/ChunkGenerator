@@ -9,6 +9,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- `/cg resume <world>` to restart a paused job from where it left
+  off, completing the start / stop / resume / cancel quartet that
+  was previously missing its resume arm — paused jobs could only be
+  picked back up automatically by a server restart with
+  `auto-resume: true`. New permission node
+  `chunkgenerator.command.resume`.
 - `/cg status` and the periodic console log now surface the live
   pipeline pressure as `inflight/target`, so when chunks are being
   submitted but not completing (slow Paper chunk worker, stuck

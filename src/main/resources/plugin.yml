@@ -25,6 +25,7 @@ permissions:
     children:
       chunkgenerator.command.start: true
       chunkgenerator.command.stop: true
+      chunkgenerator.command.resume: true
       chunkgenerator.command.cancel: true
       chunkgenerator.command.status: true
       chunkgenerator.command.list: true
@@ -35,6 +36,9 @@ permissions:
     default: op
   chunkgenerator.command.stop:
     description: Allows pausing chunk pre-generation jobs.
+    default: op
+  chunkgenerator.command.resume:
+    description: Allows resuming paused chunk pre-generation jobs.
     default: op
   chunkgenerator.command.cancel:
     description: Allows cancelling and discarding chunk pre-generation jobs.
