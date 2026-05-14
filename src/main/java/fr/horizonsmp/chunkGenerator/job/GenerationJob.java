@@ -155,13 +155,15 @@ public final class GenerationJob {
             double dt = (now - speedSampleTimeMs) / 1000.0;
             if (dt > 0.0) {
                 double instant = Math.max(0.0, (done - speedSampleChunks) / dt);
-                cachedChunksPerSecond = (speedSampleTimeMs == 0L)
-                        ? instant
-                        : (instant * 0.6 + cachedChunksPerSecond * 0.4);
+                cachedChunksPerSecond = instant * 0.6 + cachedChunksPerSecond * 0.4;
             }
         }
         speedSampleTimeMs = now;
         speedSampleChunks = done;
+    }
+
+    public int inflight() {
+        return inflight.get();
     }
 
     public double chunksPerSecond() {
@@ -171,10 +173,14 @@ public final class GenerationJob {
     public long etaSeconds() {
         double speed = chunksPerSecond();
         long remaining = totalChunks - chunksDone.get();
-        if (speed <= 0.0 || remaining <= 0L) {
+        if (speed < 0.01 || remaining <= 0L) {
             return -1L;
         }
-        return (long) (remaining / speed);
+        double seconds = remaining / speed;
+        if (seconds < 0.0 || seconds > 365.0 * 24.0 * 3600.0) {
+            return -1L;
+        }
+        return (long) seconds;
     }
 
     private void maybeSave() {
@@ -204,6 +210,7 @@ public final class GenerationJob {
     }
 
     public JobSnapshot snapshot(PerformanceSnapshot perf) {
+        int target = throttle != null ? throttle.inflightTarget() : 0;
         return new JobSnapshot(
                 worldName,
                 status.get(),
@@ -220,7 +227,9 @@ public final class GenerationJob {
                 perf.cpuPercent(),
                 perf.usedRamMb(),
                 perf.maxRamMb(),
-                launcherUuid
+                launcherUuid,
+                inflight.get(),
+                target
         );
     }
 

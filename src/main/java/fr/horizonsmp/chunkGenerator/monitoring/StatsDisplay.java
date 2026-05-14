@@ -175,6 +175,8 @@ public final class StatsDisplay {
         out.put("tps", String.format(Locale.ROOT, "%.1f", snap.tps()));
         out.put("cpu", String.format(Locale.ROOT, "%.0f", snap.cpuPercent()));
         out.put("ram", snap.usedRamMb() + "/" + snap.maxRamMb());
+        out.put("inflight", String.valueOf(snap.inflight()));
+        out.put("target", String.valueOf(snap.inflightTarget()));
         return out;
     }
 
@@ -183,7 +185,9 @@ public final class StatsDisplay {
     }
 
     public static String formatSpeed(double speed) {
-        return String.format(Locale.ROOT, "%.0f", speed);
+        if (speed >= 100.0) return String.format(Locale.ROOT, "%.0f", speed);
+        if (speed >= 10.0) return String.format(Locale.ROOT, "%.1f", speed);
+        return String.format(Locale.ROOT, "%.2f", speed);
     }
 
     public static String formatEta(long etaSeconds) {
