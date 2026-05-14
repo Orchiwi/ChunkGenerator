@@ -21,14 +21,14 @@ throttle:
   # values below always override the auto values.
   auto-scale: true
 
-  # Ceiling on concurrent chunk requests in flight. Higher does NOT
-  # mean faster past a small ceiling: Paper's chunk system processes
-  # 3-6 chunks in parallel per host, the rest just queue and pin
-  # memory (chunk decoration + lighting peaks around 15-30 MB
-  # transient per chunk, not the resting size). Hosting like
-  # Pterodactyl will kernel-OOM your container long before the JVM
-  # heap is full. Set 0 to let auto-scale derive a safe ceiling from
-  # the core count and heap.
+  # Ceiling on concurrent chunk requests in flight. Past a certain
+  # point, higher does NOT mean faster: sustained generation
+  # throughput is bounded by Paper's chunk worker count (see
+  # paper-global.yml > chunk-system > gen-parallelism), not by how
+  # deep our queue is. A queue depth around 4-6 x gen-parallelism is
+  # plenty. Beyond that, requests just sit in queue and pin memory
+  # (15-30 MB transient per chunk during decoration + lighting).
+  # Set 0 to let auto-scale pick from core count and heap.
   max-inflight: 0
 
   # Floor: the throttle never drops the inflight target below this,

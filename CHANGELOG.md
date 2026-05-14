@@ -19,6 +19,25 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   kernel-OOM the container even when the JVM heap is far from full;
   documents how to either drop `MaxRAMPercentage` or lower the
   plugin's memory thresholds.
+- README section "Maximising sustained throughput" explaining that
+  the real ceiling is Paper's `chunk-system.gen-parallelism` in
+  `paper-global.yml`, not our queue depth. The plugin now logs the
+  resolved throttle values and a per-host gen-parallelism
+  recommendation at startup so operators do not have to derive it
+  themselves.
+
+### Changed
+
+- Auto-scaled `max-inflight` raised to `max(64, min(cores × 32,
+  heapMB / 60))` (was `cores × 16` / `heapMB / 50`). On a 6-core /
+  16 GB host the ceiling goes from 96 → 192 inflight, keeping the
+  queue full while Paper's chunk pipeline transitions between cached
+  and freshly generated regions. Memory budget per inflight chunk
+  stays at the conservative 30 MB transient estimate, so 8 GB hosts
+  remain capped at 136 by the heap-based ceiling.
+- Auto-scaled `start-inflight` raised to `max(16, cores × 6)`, so the
+  warm-up phase reaches Paper's worker saturation in a couple of
+  seconds rather than throttle-ramping for ten.
 
 ### Changed
 

@@ -100,6 +100,35 @@ Key knobs:
 All player-facing strings live in `messages.yml` with the standard `&`
 color codes; missing keys fall back to bundled defaults.
 
+### Maximising sustained throughput
+
+The plugin keeps Paper's chunk request queue saturated, but Paper
+itself only generates a few chunks in parallel. On a healthy server
+the plugin will hit a ceiling that looks like this in `/cg status`:
+
+- `inflight = target` (queue is full, plugin is not the bottleneck)
+- `TPS` close to 20 (main thread is idle)
+- CPU usage well below 100 % of the available cores
+
+That ceiling is **Paper's chunk worker count**, configured in
+`paper-global.yml`:
+
+```yaml
+chunk-system:
+  gen-parallelism: -1   # auto = max(1, cores/2). Raise this.
+  io-threads: -1        # auto = max(1, cores/2)
+```
+
+For a server dedicated to pre-generation, set
+`chunk-system.gen-parallelism` to roughly `cores - 2` (leaves the
+main thread and one core for I/O); on a 6-core box that means `4`.
+The plugin logs the recommendation matching the detected core count
+at startup.
+
+Going beyond what Paper can natively process per host requires
+either Folia (region-threaded server fork, which the plugin already
+supports through reflection) or running multiple worlds in parallel.
+
 ### Container hosts (Pterodactyl, Docker) and `MaxRAMPercentage`
 
 ChunkGenerator's memory thresholds compare against the JVM heap

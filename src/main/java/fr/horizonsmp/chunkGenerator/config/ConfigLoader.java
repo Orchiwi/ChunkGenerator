@@ -19,6 +19,7 @@ public final class ConfigLoader {
 
         ConfigurationSection throttleSection = section(cfg, "throttle");
         PluginConfig.Throttle throttle = readThrottle(throttleSection);
+        logThrottleResolution(throttle);
 
         ConfigurationSection displaySection = section(cfg, "display");
         ConfigurationSection bossSection = section(displaySection, "bossbar");
@@ -58,7 +59,21 @@ public final class ConfigLoader {
         return s != null ? s : cfg.createSection(path);
     }
 
-    private static PluginConfig.Throttle readThrottle(ConfigurationSection s) {
+    private void logThrottleResolution(PluginConfig.Throttle t) {
+        int cores = Runtime.getRuntime().availableProcessors();
+        long heapMb = Runtime.getRuntime().maxMemory() / (1024L * 1024L);
+        plugin.getLogger().info("Throttle resolved: target-tps=" + t.targetTps()
+                + ", start-inflight=" + t.startInflight()
+                + ", max-inflight=" + t.maxInflight()
+                + " (host: " + cores + " cores, " + heapMb + " MB heap)");
+        int recommendation = Math.max(2, cores - 2);
+        plugin.getLogger().info("Sustained throughput is bounded by Paper's chunk worker count. "
+                + "For maximum generation speed on this host, set "
+                + "paper-global.yml > chunk-system > gen-parallelism to " + recommendation
+                + " or higher (currently auto = max(1, cores/2) = " + Math.max(1, cores / 2) + ").");
+    }
+
+    private PluginConfig.Throttle readThrottle(ConfigurationSection s) {
         double targetTps = s.getDouble("target-tps", 18.5);
         boolean autoScale = s.getBoolean("auto-scale", true);
         int rawMax = s.getInt("max-inflight", 0);
@@ -73,13 +88,13 @@ public final class ConfigLoader {
         int maxInflight = rawMax > 0
                 ? rawMax
                 : autoScale
-                        ? Math.max(32, (int) Math.min((long) cores * 16L, heapMb / 50L))
-                        : 64;
+                        ? Math.max(64, (int) Math.min((long) cores * 32L, heapMb / 60L))
+                        : 96;
         int startInflight = rawStart > 0
                 ? rawStart
                 : autoScale
-                        ? Math.max(8, cores * 4)
-                        : 16;
+                        ? Math.max(16, cores * 6)
+                        : 32;
         int minInflight = Math.max(1, rawMin);
         if (minInflight > maxInflight) {
             minInflight = maxInflight;
