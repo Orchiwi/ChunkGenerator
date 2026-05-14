@@ -66,11 +66,14 @@ public final class ConfigLoader {
                 + ", start-inflight=" + t.startInflight()
                 + ", max-inflight=" + t.maxInflight()
                 + " (host: " + cores + " cores, " + heapMb + " MB heap)");
-        int recommendation = Math.max(2, cores - 2);
+        int workerRec = Math.max(2, cores - 1);
+        int ioRec = Math.max(2, Math.min(4, cores / 2));
         plugin.getLogger().info("Sustained throughput is bounded by Paper's chunk worker count. "
-                + "For maximum generation speed on this host, set "
-                + "paper-global.yml > chunk-system > gen-parallelism to " + recommendation
-                + " or higher (currently auto = max(1, cores/2) = " + Math.max(1, cores / 2) + ").");
+                + "Default -1 (auto) typically allocates around cores/2 workers; for a host "
+                + "doing pre-generation with no players online, set paper-global.yml > "
+                + "chunk-system > worker-threads to " + workerRec
+                + " and io-threads to " + ioRec
+                + " (on older Paper versions the relevant key is gen-parallelism).");
     }
 
     private PluginConfig.Throttle readThrottle(ConfigurationSection s) {

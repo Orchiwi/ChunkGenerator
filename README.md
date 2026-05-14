@@ -111,19 +111,23 @@ the plugin will hit a ceiling that looks like this in `/cg status`:
 - CPU usage well below 100 % of the available cores
 
 That ceiling is **Paper's chunk worker count**, configured in
-`paper-global.yml`:
+`paper-global.yml`. The default `-1` is auto-detection, not
+"unlimited" — it typically resolves to around `cores / 2`, which
+leaves most of the CPU idle during pre-generation. Override it:
 
 ```yaml
 chunk-system:
-  gen-parallelism: -1   # auto = max(1, cores/2). Raise this.
-  io-threads: -1        # auto = max(1, cores/2)
+  worker-threads: 5     # cores - 1; leave 1 core for the main thread
+  io-threads: 3         # 2-4 is plenty for a modern SSD
 ```
 
-For a server dedicated to pre-generation, set
-`chunk-system.gen-parallelism` to roughly `cores - 2` (leaves the
-main thread and one core for I/O); on a 6-core box that means `4`.
-The plugin logs the recommendation matching the detected core count
-at startup.
+On older Paper versions (pre-Moonrise rewrite) the relevant key is
+`gen-parallelism` instead of `worker-threads`. The plugin logs the
+exact recommendation for the detected core count at startup.
+
+If no players are online during pre-generation (the usual case), the
+main thread has nothing to do anyway, so on a 6-core host
+`worker-threads: 6` is safe and saturates every core.
 
 Going beyond what Paper can natively process per host requires
 either Folia (region-threaded server fork, which the plugin already
