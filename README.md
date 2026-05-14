@@ -76,26 +76,30 @@ Alias: `/chunkgen`.
 See `config.yml` for the full set of throttle, display, monitoring and
 persistence options.
 
-Key knobs:
+Key knobs (basics, top of `config.yml`):
 
-- `throttle.target-tps` — TPS the auto-tuner aims to keep. Lower it on
-  shared hardware, raise it on dedicated machines.
+- `target-tps` — TPS the auto-tuner aims to keep. Lower it on shared
+  hardware, raise it toward 20 on a dedicated pre-gen host.
+- `bossbar.color` — Adventure BossBar color name.
+- `auto-resume` — when `false`, paused jobs are loaded but not
+  started automatically after a restart.
+
+Advanced (`throttle` section, leave alone unless you know what you
+are doing):
+
 - `throttle.auto-scale` — when `true` (default), `max-inflight` and
   `start-inflight` are derived from the available cores and JVM heap;
   explicit non-zero values still override them.
 - `throttle.max-inflight` / `min-inflight` / `start-inflight` — hard
   limits and starting point for the adaptive inflight target (the
   number of concurrent chunk requests in flight). Higher does **not**
-  mean faster past a small ceiling — Paper processes 3–6 chunks in
-  parallel per host and the rest just pin memory (~15–30 MB transient
-  per chunk during decoration and lighting).
+  mean faster past a small ceiling — Paper processes a handful of
+  chunks in parallel per host and the rest just pin memory
+  (~15–30 MB transient per chunk during decoration and lighting).
 - `throttle.memory-backoff-pct` / `memory-pause-pct` — heap pressure
   thresholds. The throttle scales down past the backoff value and
   pauses new submissions entirely past the pause value, resuming
   automatically once heap pressure clears.
-- `display.bossbar.color` — Adventure BossBar color name.
-- `persistence.auto-resume-on-startup` — when `false`, paused jobs are
-  loaded but not started automatically after a restart.
 
 All player-facing strings live in `messages.yml` with the standard `&`
 color codes; missing keys fall back to bundled defaults.

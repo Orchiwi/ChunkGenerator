@@ -17,21 +17,18 @@ public final class ConfigLoader {
         plugin.reloadConfig();
         FileConfiguration cfg = plugin.getConfig();
 
-        ConfigurationSection throttleSection = section(cfg, "throttle");
-        PluginConfig.Throttle throttle = readThrottle(throttleSection);
+        PluginConfig.Throttle throttle = readThrottle(cfg);
         logThrottleResolution(throttle);
 
-        ConfigurationSection displaySection = section(cfg, "display");
-        ConfigurationSection bossSection = section(displaySection, "bossbar");
-        ConfigurationSection actionSection = section(displaySection, "actionbar");
-        ConfigurationSection consoleSection = section(displaySection, "console");
+        ConfigurationSection bossSection = section(cfg, "bossbar");
+        ConfigurationSection consoleSection = section(cfg, "console");
         PluginConfig.Display display = new PluginConfig.Display(
                 new PluginConfig.Display.BossBar(
                         bossSection.getBoolean("enabled", true),
                         bossSection.getString("color", "BLUE")
                 ),
                 new PluginConfig.Display.ActionBar(
-                        actionSection.getBoolean("enabled", true)
+                        cfg.getBoolean("actionbar", true)
                 ),
                 new PluginConfig.Display.Console(
                         consoleSection.getBoolean("enabled", true),
@@ -39,16 +36,14 @@ public final class ConfigLoader {
                 )
         );
 
-        ConfigurationSection monitoringSection = section(cfg, "monitoring");
         PluginConfig.Monitoring monitoring = new PluginConfig.Monitoring(
-                monitoringSection.getLong("poll-interval-ms", 1000L)
+                cfg.getLong("monitoring-poll-ms", 1000L)
         );
 
-        ConfigurationSection persistenceSection = section(cfg, "persistence");
         PluginConfig.Persistence persistence = new PluginConfig.Persistence(
-                persistenceSection.getBoolean("auto-resume-on-startup", true),
-                persistenceSection.getLong("save-throttle-seconds", 5L),
-                persistenceSection.getLong("save-throttle-chunks", 1000L)
+                cfg.getBoolean("auto-resume", true),
+                cfg.getLong("save-throttle-seconds", 5L),
+                cfg.getLong("save-throttle-chunks", 1000L)
         );
 
         return new PluginConfig(throttle, display, monitoring, persistence);
@@ -76,8 +71,9 @@ public final class ConfigLoader {
                 + " (on older Paper versions the relevant key is gen-parallelism).");
     }
 
-    private PluginConfig.Throttle readThrottle(ConfigurationSection s) {
-        double targetTps = s.getDouble("target-tps", 18.5);
+    private PluginConfig.Throttle readThrottle(ConfigurationSection cfg) {
+        ConfigurationSection s = section(cfg, "throttle");
+        double targetTps = cfg.getDouble("target-tps", 18.5);
         boolean autoScale = s.getBoolean("auto-scale", true);
         int rawMax = s.getInt("max-inflight", 0);
         int rawMin = s.getInt("min-inflight", 8);

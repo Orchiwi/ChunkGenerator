@@ -28,6 +28,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Changed
 
+- `config.yml` flattened and trimmed for public use: a banner at the
+  top points operators at `paper-global.yml > chunk-system` (the
+  actual speed lever), and the file is split into a short "Basics"
+  block (`target-tps`, bossbar/actionbar/console toggles,
+  `auto-resume`) and an "Advanced" `throttle` section that most
+  servers never need to touch. Dropped the `display`, `monitoring`
+  and `persistence` wrapper sections; keys live at the root now.
 - Auto-scaled `max-inflight` raised to `max(64, min(cores × 32,
   heapMB / 60))` (was `cores × 16` / `heapMB / 50`). On a 6-core /
   16 GB host the ceiling goes from 96 → 192 inflight, keeping the
@@ -97,6 +104,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   `throttle.min-inflight` and `throttle.start-inflight`. The hardcoded
   `MAX_INFLIGHT = 200` ceiling on concurrent chunk loads is also
   gone.
+- The `display`, `monitoring` and `persistence` wrapping sections in
+  `config.yml`: `bossbar`, `actionbar`, `console`, `target-tps`,
+  `auto-resume`, `monitoring-poll-ms`, `save-throttle-seconds` and
+  `save-throttle-chunks` now live at the root for a flatter,
+  easier-to-skim file. Existing configs need a regen (delete
+  `plugins/ChunkGenerator/config.yml`) or a manual key migration.
 
 ## [0.1.0-alpha.1] - 2026-05-14
 

@@ -1,91 +1,63 @@
 # =====================================================================
-# ChunkGenerator configuration
+# ChunkGenerator
 #
-# Pre-generate world chunks in a configurable shape while keeping the
-# server playable. The throttle drives the number of *concurrent*
-# chunk requests in flight (not chunks-per-tick) because Paper's
-# chunk system completes requests asynchronously at variable rates.
-# Keeping the request queue saturated is what turns idle CPU and RAM
-# into raw throughput.
+# Defaults below work for most Paper hosts. The plugin auto-scales its
+# internal chunk queue from your CPU cores and JVM heap, so you do not
+# need to touch the advanced section to get a working pre-generator.
+#
+# > To actually generate FASTER, the real lever is Paper itself, not
+# > this plugin. Open config/paper-global.yml in your server root and
+# > raise the chunk worker count:
+# >
+# >     chunk-system:
+# >       worker-threads: <cores - 1>   # e.g. 5 on a 6-core host
+# >       io-threads:     3
+# >
+# > The default value -1 is "auto" (~cores/2), which leaves most of
+# > the CPU idle during pre-generation. The plugin will print the
+# > exact number it recommends for your host in the startup log.
 # =====================================================================
 
+
+# === Basics ===
+
+# Target server TPS. Lower (e.g. 15) on shared hardware, raise toward
+# 20 on a dedicated pre-generation host.
+target-tps: 18.5
+
+# Live BossBar for staff with the chunkgenerator.bossbar permission.
+# Colors: PINK, BLUE, RED, GREEN, YELLOW, PURPLE, WHITE.
+bossbar:
+  enabled: true
+  color: BLUE
+
+# Compact ActionBar for the player who launched the job.
+actionbar: true
+
+# Periodic progress log to the server console.
+console:
+  enabled: true
+  interval-seconds: 30
+
+# Resume any job that was running when the server stopped.
+auto-resume: true
+
+
+# === Advanced ===
+# Leave the section below alone unless you know what you are doing.
+
 throttle:
-  # Target TPS the auto-tuner aims to maintain. The controller scales
-  # the inflight target up when TPS is comfortably above this value
-  # and down when it dips below.
-  target-tps: 18.5
-
-  # When true, max-inflight and start-inflight are derived from
-  # availableProcessors() and maxMemory() at startup, so the plugin
-  # adapts to the host without manual tuning. Explicit non-zero
-  # values below always override the auto values.
+  # Auto-derive max-inflight and start-inflight from CPU cores and
+  # heap. Set explicit non-zero values below to override.
   auto-scale: true
-
-  # Ceiling on concurrent chunk requests in flight. Past a certain
-  # point, higher does NOT mean faster: sustained generation
-  # throughput is bounded by Paper's chunk worker count (see
-  # paper-global.yml > chunk-system > gen-parallelism), not by how
-  # deep our queue is. A queue depth around 4-6 x gen-parallelism is
-  # plenty. Beyond that, requests just sit in queue and pin memory
-  # (15-30 MB transient per chunk during decoration + lighting).
-  # Set 0 to let auto-scale pick from core count and heap.
   max-inflight: 0
-
-  # Floor: the throttle never drops the inflight target below this,
-  # so a single bad tick does not stall the job entirely.
   min-inflight: 8
-
-  # Inflight target on job start. The controller ramps it up as TPS
-  # holds — we do not need to begin at max because Paper's pipeline
-  # saturates with very few in-flight chunks. Set 0 for auto-scale.
   start-inflight: 0
+  # Memory thresholds (% of max heap). Lower (e.g. 60 / 70) on
+  # container hosts running with MaxRAMPercentage=95 - see README.
+  memory-backoff-pct: 70
+  memory-pause-pct: 80
 
-  # Heap-usage backoff threshold. Conservative because container
-  # hosts (Pterodactyl, etc.) cap RSS — heap + native + metaspace +
-  # direct buffers can easily exceed the container limit even with
-  # heap below 85 %. Lower this further (e.g. 60.0) if you run on a
-  # host with `MaxRAMPercentage=95` or similar.
-  memory-backoff-pct: 70.0
-
-  # Above this percent of max heap, new submissions pause entirely
-  # (loads in flight finish normally). Resumes once heap pressure
-  # clears.
-  memory-pause-pct: 80.0
-
-display:
-  bossbar:
-    # Show a live BossBar to every player holding
-    # `chunkgenerator.bossbar` while a job runs.
-    enabled: true
-    # Adventure BossBar color. Allowed values: PINK, BLUE, RED,
-    # GREEN, YELLOW, PURPLE, WHITE.
-    color: BLUE
-
-  actionbar:
-    # Send a compact ActionBar update to the player who launched the
-    # job (if any). Console launches receive no ActionBar.
-    enabled: true
-
-  console:
-    # Periodically log job progress to the server console.
-    enabled: true
-    interval-seconds: 30
-
-monitoring:
-  # How often the performance monitor samples TPS / CPU / RAM, in
-  # milliseconds. Lower values give snappier readings at the cost of
-  # a tiny constant overhead.
-  poll-interval-ms: 1000
-
-persistence:
-  # When the server starts, resume any job that was RUNNING when the
-  # server stopped. Set to false to require a manual `/cg start` after
-  # every restart.
-  auto-resume-on-startup: true
-
-  # Persist progress at most this often (seconds) ...
-  save-throttle-seconds: 5
-
-  # ... or after this many additional chunks have been processed,
-  # whichever comes first.
-  save-throttle-chunks: 1000
+monitoring-poll-ms: 1000
+save-throttle-seconds: 5
+save-throttle-chunks: 1000
