@@ -52,7 +52,7 @@ modrinth {
     versionNumber.set(project.version.toString())
     versionType.set(resolveVersionType(project.version.toString()))
     uploadFile.set(tasks.shadowJar.flatMap { it.archiveFile })
-    gameVersions.addAll("1.21.4", "1.21.5", "1.21.6")
+    gameVersions.addAll("26.1.2")
     loaders.addAll("paper", "purpur", "folia")
     changelog.set(provider { extractChangelogSection(project.version.toString()) })
     syncBodyFrom.set(provider { file("README.md").readText() })

@@ -147,5 +147,5 @@ have been validated on production-scale worlds.
 
 ### Requirements
 
-- Paper, Purpur or Folia 1.21.x (API target `26.1.2`).
+- Paper, Purpur or Folia for Minecraft `26.1.2`.
 - Java 25.

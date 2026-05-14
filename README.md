@@ -41,7 +41,7 @@ The first run drops a Paper server in `run/`; accept the EULA in
 
 ## Requirements
 
-- Paper, Purpur or Folia targeting Minecraft 1.21.x (API `26.1.2`).
+- Paper, Purpur or Folia for Minecraft `26.1.2`.
 - Java 25.
 
 ## Commands
