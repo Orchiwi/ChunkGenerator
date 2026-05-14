@@ -43,13 +43,13 @@ command:
     line-state: "&8│ &7State: &f{state}"
     line-shape: "&8│ &7Shape: &f{shape} &7| Center: &f({centerX},{centerZ}) &7| Size: &f{sizeX}x{sizeZ}"
     line-progress: "&8│ &7Progress: &a{percent}% &7({done}/{total} chunks)"
-    line-speed: "&8│ &7Speed: &b{speed} c/s &7| ETA: &e{eta}"
+    line-speed: "&8│ &7Speed: &b{speed} chunk/s &7| ETA: &e{eta}"
     line-perf: "&8│ &7TPS: &f{tps} &7| CPU: &f{cpu}% &7| RAM: &f{ram} MB"
 
   list:
     empty: "&7No jobs registered."
     header: "&8&m            &r &bChunkGenerator jobs &8&m            "
-    entry: "&8- &f{world} &7({state}) &7- &a{percent}% &7- &b{speed} c/s"
+    entry: "&8- &f{world} &7({state}) &7- &a{percent}% &7- &b{speed} chunk/s"
 
   help:
     header: "&8&m            &r &bChunkGenerator commands &8&m            "
@@ -61,6 +61,6 @@ command:
     reload: "&e/{label} reload &8- &7Reload the configuration"
 
 display:
-  bossbar: "&b{world} &8| &a{percent}% &8| &b{speed} c/s &8| &eETA {eta}"
-  actionbar: "&a{percent}% &8| &b{speed} c/s &8| &eETA {eta}"
-  console: "[{world}] {percent}% - {done}/{total} chunks - {speed} c/s - TPS {tps} - CPU {cpu}% - RAM {ram} MB"
+  bossbar: "&b{world} &8| &a{percent}% &8| &b{speed} chunk/s &8| &eETA {eta}"
+  actionbar: "&a{percent}% &8| &b{speed} chunk/s &8| &eETA {eta}"
+  console: "[{world}] {percent}% - {done}/{total} chunks - {speed} chunk/s - TPS {tps} - CPU {cpu}% - RAM {ram} MB"
