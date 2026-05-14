@@ -1,0 +1,59 @@
+# =====================================================================
+# ChunkGenerator configuration
+#
+# Pre-generate world chunks in a configurable shape while keeping the
+# server TPS healthy. The throttle adapts the number of chunks loaded
+# per tick based on the observed TPS so the server stays playable.
+# =====================================================================
+
+throttle:
+  # Target TPS the auto-tuner aims to maintain. The throttle increases
+  # chunks-per-tick when TPS is above this value and decreases it
+  # otherwise.
+  target-tps: 18.5
+
+  # Hard ceiling for chunks loaded per tick. Even on a powerful
+  # machine with stable TPS the throttle will not exceed this.
+  max-chunks-per-tick: 50.0
+
+  # Floor for chunks loaded per tick. Going below this would make the
+  # job essentially idle.
+  min-chunks-per-tick: 0.5
+
+display:
+  bossbar:
+    # Show a live BossBar to every player holding
+    # `chunkgenerator.bossbar` while a job runs.
+    enabled: true
+    # Adventure BossBar color. Allowed values: PINK, BLUE, RED,
+    # GREEN, YELLOW, PURPLE, WHITE.
+    color: BLUE
+
+  actionbar:
+    # Send a compact ActionBar update to the player who launched the
+    # job (if any). Console launches receive no ActionBar.
+    enabled: true
+
+  console:
+    # Periodically log job progress to the server console.
+    enabled: true
+    interval-seconds: 30
+
+monitoring:
+  # How often the performance monitor samples TPS / CPU / RAM, in
+  # milliseconds. Lower values give snappier readings at the cost of
+  # a tiny constant overhead.
+  poll-interval-ms: 1000
+
+persistence:
+  # When the server starts, resume any job that was RUNNING when the
+  # server stopped. Set to false to require a manual `/cg start` after
+  # every restart.
+  auto-resume-on-startup: true
+
+  # Persist progress at most this often (seconds) ...
+  save-throttle-seconds: 5
+
+  # ... or after this many additional chunks have been processed,
+  # whichever comes first.
+  save-throttle-chunks: 1000

@@ -1,0 +1,53 @@
+name: ChunkGenerator
+version: '${version}'
+description: Pre-generate world chunks in a configurable shape with TPS-aware throttling.
+author: Orchiwi
+
+main: fr.horizonsmp.chunkGenerator.ChunkGenerator
+api-version: '26.1.2'
+folia-supported: true
+load: POSTWORLD
+
+softdepend:
+  - LuckPerms
+
+commands:
+  chunkgen:
+    description: ChunkGenerator administration commands.
+    usage: /<command> [start|stop|cancel|status|list|reload|help]
+    aliases: [cg]
+    permission: chunkgenerator.admin
+
+permissions:
+  chunkgenerator.admin:
+    description: Full access to ChunkGenerator commands and live BossBar.
+    default: op
+    children:
+      chunkgenerator.command.start: true
+      chunkgenerator.command.stop: true
+      chunkgenerator.command.cancel: true
+      chunkgenerator.command.status: true
+      chunkgenerator.command.list: true
+      chunkgenerator.command.reload: true
+      chunkgenerator.bossbar: true
+  chunkgenerator.command.start:
+    description: Allows starting chunk pre-generation jobs.
+    default: op
+  chunkgenerator.command.stop:
+    description: Allows pausing chunk pre-generation jobs.
+    default: op
+  chunkgenerator.command.cancel:
+    description: Allows cancelling and discarding chunk pre-generation jobs.
+    default: op
+  chunkgenerator.command.status:
+    description: Allows querying chunk pre-generation status.
+    default: op
+  chunkgenerator.command.list:
+    description: Allows listing chunk pre-generation jobs.
+    default: op
+  chunkgenerator.command.reload:
+    description: Allows reloading the ChunkGenerator configuration.
+    default: op
+  chunkgenerator.bossbar:
+    description: Receive the live ChunkGenerator BossBar while jobs run.
+    default: op
