@@ -80,8 +80,17 @@ Key knobs:
 
 - `throttle.target-tps` — TPS the auto-tuner aims to keep. Lower it on
   shared hardware, raise it on dedicated machines.
-- `throttle.max-chunks-per-tick` / `min-chunks-per-tick` — hard limits
-  for the adaptive controller.
+- `throttle.auto-scale` — when `true` (default), `max-inflight` and
+  `start-inflight` are derived from the available cores and JVM heap;
+  explicit non-zero values still override them.
+- `throttle.max-inflight` / `min-inflight` / `start-inflight` — hard
+  limits and starting point for the adaptive inflight target (the
+  number of concurrent chunk requests in flight). Higher values use
+  more RAM but generate faster on hardware that can keep up.
+- `throttle.memory-backoff-pct` / `memory-pause-pct` — heap pressure
+  thresholds. The throttle scales down past the backoff value and
+  pauses new submissions entirely past the pause value, resuming
+  automatically once heap pressure clears.
 - `display.bossbar.color` — Adventure BossBar color name.
 - `persistence.auto-resume-on-startup` — when `false`, paused jobs are
   loaded but not started automatically after a restart.
