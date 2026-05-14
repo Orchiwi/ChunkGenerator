@@ -7,87 +7,84 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.0-beta.1] - 2026-05-15
+
+First beta release after a round of production tuning on real
+hosts. The plugin now ships with auto-scaled throttle defaults
+calibrated against an actual container-host crash, six chunk-visit
+patterns, a resume command, and a simplified config aimed at public
+use.
+
 ### Added
 
 - **Traversal patterns** as an optional last argument to
-  `/cg start`. Six patterns are supported: `center` (default,
-  spiral outward from the zone center), `edge` (concentric rings
-  inward from the outer perimeter to the center), and `north` /
-  `south` / `east` / `west` (linear row or column sweep starting at
-  the named edge). All patterns visit the same set of chunks; only
-  the order differs, and the saved iterator index is pattern-aware
-  so a paused job resumes in its own sequence.
+  `/cg start`. Six patterns: `center` (default, spiral outward from
+  the zone center), `edge` (concentric rings inward from the outer
+  perimeter to the center), and `north` / `south` / `east` /
+  `west` (linear row or column sweep starting at the named edge).
+  All patterns visit the same set of chunks; only the order
+  differs, and the saved iterator index is pattern-aware so a
+  paused job resumes in its own sequence.
 - `/cg resume <world>` to restart a paused job from where it left
-  off, completing the start / stop / resume / cancel quartet that
-  was previously missing its resume arm — paused jobs could only be
-  picked back up automatically by a server restart with
-  `auto-resume: true`. New permission node
+  off, completing the start / stop / resume / cancel quartet.
+  Paused jobs were previously only reactivated by a server restart
+  with `auto-resume: true`. New permission node
   `chunkgenerator.command.resume`.
-- `/cg status` and the periodic console log now surface the live
-  pipeline pressure as `inflight/target`, so when chunks are being
-  submitted but not completing (slow Paper chunk worker, stuck
-  futures, far-out generation) the diagnosis is obvious from one
-  command.
-- README section on container hosts: `MaxRAMPercentage=95` (the
-  Pterodactyl default) leaves no room for native memory and will
-  kernel-OOM the container even when the JVM heap is far from full;
-  documents how to either drop `MaxRAMPercentage` or lower the
-  plugin's memory thresholds.
-- README section "Maximising sustained throughput" explaining that
-  the real ceiling is Paper's `chunk-system.gen-parallelism` in
-  `paper-global.yml`, not our queue depth. The plugin now logs the
-  resolved throttle values and a per-host gen-parallelism
-  recommendation at startup so operators do not have to derive it
-  themselves.
+- `inflight/target` pipeline pressure reading in `/cg status` and
+  the periodic console log. When chunks are being submitted but
+  not completing (slow Paper chunk worker, stuck futures, far-out
+  generation) the diagnosis is obvious from one command.
+- Startup log lines that report the resolved throttle values and
+  recommend a `paper-global.yml > chunk-system > worker-threads`
+  setting matching the host's core count, so operators do not have
+  to derive the Paper-side tuning themselves.
+- README sections on **container hosts and `MaxRAMPercentage`**
+  (Pterodactyl, Docker — heap-based monitoring cannot observe the
+  cgroup RSS ceiling) and on **maximising sustained throughput**
+  (the real ceiling is Paper's chunk worker count, not the
+  plugin's queue depth).
 
 ### Changed
 
-- `config.yml` flattened and trimmed for public use: a banner at the
-  top points operators at `paper-global.yml > chunk-system` (the
-  actual speed lever), and the file is split into a short "Basics"
-  block (`target-tps`, bossbar/actionbar/console toggles,
-  `auto-resume`) and an "Advanced" `throttle` section that most
-  servers never need to touch. Dropped the `display`, `monitoring`
-  and `persistence` wrapper sections; keys live at the root now.
-- Auto-scaled `max-inflight` raised to `max(64, min(cores × 32,
-  heapMB / 60))` (was `cores × 16` / `heapMB / 50`). On a 6-core /
-  16 GB host the ceiling goes from 96 → 192 inflight, keeping the
-  queue full while Paper's chunk pipeline transitions between cached
-  and freshly generated regions. Memory budget per inflight chunk
-  stays at the conservative 30 MB transient estimate, so 8 GB hosts
-  remain capped at 136 by the heap-based ceiling.
-- Auto-scaled `start-inflight` raised to `max(16, cores × 6)`, so the
-  warm-up phase reaches Paper's worker saturation in a couple of
-  seconds rather than throttle-ramping for ten.
-
-### Changed
-
-- Auto-scaled `max-inflight` and `start-inflight` are now tied to
-  the core count (Paper processes 3-6 chunks in parallel per host
-  regardless of heap size) instead of the heap alone, and use a
-  conservative 30 MB/chunk transient estimate rather than 5 MB.
-  On a 6 core / 8 GB host the ceiling drops from ~1638 to ~96
-  inflight and the start target from 192 to 24 — far tighter, but
-  no slower in practice (Paper's queue past the saturation point
-  just pinned memory).
-- Default `memory-backoff-pct` lowered from 85 to 70 and
-  `memory-pause-pct` from 92 to 80 to keep a margin from the
-  container RSS limit that heap-based monitoring cannot observe
+- `config.yml` flattened and trimmed for public use. A short
+  **Basics** block at the top (`target-tps`,
+  bossbar / actionbar / console toggles, `auto-resume`) and an
+  **Advanced** `throttle` section that most servers never need to
+  touch. A banner at the very top points operators at
+  `paper-global.yml > chunk-system` for the actual speed lever.
+  The `display`, `monitoring` and `persistence` wrapper sections
+  are gone — every knob lives at the root now.
+- Auto-scaled defaults retuned against production data and tied to
+  the core count rather than the heap alone, with a conservative
+  30 MB-per-inflight-chunk transient estimate.
+  - `max-inflight = max(64, min(cores × 32, heapMB / 60))`
+  - `start-inflight = max(16, cores × 6)`
+- Default memory thresholds lowered: `memory-backoff-pct`
+  85 → 70, `memory-pause-pct` 92 → 80, to keep a margin from the
+  container RSS limit that heap-based monitoring cannot see
   directly.
 
 ### Fixed
 
-- Kernel-OOM crash on container hosts (Pterodactyl, exit code 137)
-  when the throttle saturated to its old auto-scaled ceiling and
-  Paper's chunk save thread fell behind: held chunks plus native
-  memory exceeded the cgroup limit even while JVM heap stayed under
-  the old 85 % backoff threshold.
-- ETA no longer overflows to `Long.MAX_VALUE` (displayed as
-  `2562047788015215h30m`) when the smoothed speed decays toward zero.
-  Below 0.01 chunk/s or for predicted ETAs over a year, the throttle
-  returns "?" instead of a meaningless value.
+- **Kernel-OOM crash on container hosts** (Pterodactyl, exit code
+  137) when the throttle saturated to its previous auto-scaled
+  ceiling and Paper's chunk save thread fell behind: held chunks
+  plus native memory exceeded the cgroup limit even while JVM heap
+  stayed under the old 85 % backoff threshold.
+- ETA no longer overflows to `Long.MAX_VALUE` (rendered as
+  `2562047788015215h30m`) when the smoothed speed decays toward
+  zero. Below 0.01 chunk/s or for predicted ETAs over a year, the
+  status returns `?` instead of a meaningless number.
 - Speed readout shows two decimals below 10 chunk/s and one decimal
-  below 100, so sub-1 chunk/s progress no longer rounds to a flat 0.
+  below 100, so sub-1 chunk/s progress no longer rounds to a flat
+  `0`.
+
+### Migration
+
+- Delete `plugins/ChunkGenerator/config.yml` after upgrading so the
+  new flat layout (with the `paper-global.yml` tuning banner)
+  regenerates. Old YAMLs still load but stay on the previous keys
+  that the plugin no longer reads.
 
 ## [0.1.0-alpha.2] - 2026-05-14
 
