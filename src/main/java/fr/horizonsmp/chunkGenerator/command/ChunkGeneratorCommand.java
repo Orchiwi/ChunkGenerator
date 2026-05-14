@@ -275,6 +275,8 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
         map.put("tps", String.format(Locale.ROOT, "%.1f", snap.tps()));
         map.put("cpu", String.format(Locale.ROOT, "%.0f", snap.cpuPercent()));
         map.put("ram", snap.usedRamMb() + "/" + snap.maxRamMb());
+        map.put("inflight", String.valueOf(snap.inflight()));
+        map.put("target", String.valueOf(snap.inflightTarget()));
 
         sender.sendMessage(messages.get("command.status.header"));
         sender.sendMessage(messages.get("command.status.line-world", map));

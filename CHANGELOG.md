@@ -7,6 +7,23 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- `/cg status` and the periodic console log now surface the live
+  pipeline pressure as `inflight/target`, so when chunks are being
+  submitted but not completing (slow Paper chunk worker, stuck
+  futures, far-out generation) the diagnosis is obvious from one
+  command.
+
+### Fixed
+
+- ETA no longer overflows to `Long.MAX_VALUE` (displayed as
+  `2562047788015215h30m`) when the smoothed speed decays toward zero.
+  Below 0.01 chunk/s or for predicted ETAs over a year, the throttle
+  returns "?" instead of a meaningless value.
+- Speed readout shows two decimals below 10 chunk/s and one decimal
+  below 100, so sub-1 chunk/s progress no longer rounds to a flat 0.
+
 ## [0.1.0-alpha.2] - 2026-05-14
 
 ### Added

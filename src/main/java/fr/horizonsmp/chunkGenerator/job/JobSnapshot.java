@@ -20,7 +20,9 @@ public record JobSnapshot(
         double cpuPercent,
         long usedRamMb,
         long maxRamMb,
-        UUID launcherUuid
+        UUID launcherUuid,
+        int inflight,
+        int inflightTarget
 ) {
 
     public double progressPercent() {

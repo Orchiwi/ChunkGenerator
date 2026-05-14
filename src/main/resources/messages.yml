@@ -44,7 +44,7 @@ command:
     line-shape: "&8│ &7Shape: &f{shape} &7| Center: &f({centerX},{centerZ}) &7| Size: &f{sizeX}x{sizeZ}"
     line-progress: "&8│ &7Progress: &a{percent}% &7({done}/{total} chunks)"
     line-speed: "&8│ &7Speed: &b{speed} chunk/s &7| ETA: &e{eta}"
-    line-perf: "&8│ &7TPS: &f{tps} &7| CPU: &f{cpu}% &7| RAM: &f{ram} MB"
+    line-perf: "&8│ &7TPS: &f{tps} &7| CPU: &f{cpu}% &7| RAM: &f{ram} MB &7| Inflight: &f{inflight}/{target}"
 
   list:
     empty: "&7No jobs registered."
@@ -63,4 +63,4 @@ command:
 display:
   bossbar: "&b{world} &8| &a{percent}% &8| &b{speed} chunk/s &8| &eETA {eta}"
   actionbar: "&a{percent}% &8| &b{speed} chunk/s &8| &eETA {eta}"
-  console: "[{world}] {percent}% - {done}/{total} chunks - {speed} chunk/s - TPS {tps} - CPU {cpu}% - RAM {ram} MB"
+  console: "[{world}] {percent}% - {done}/{total} chunks - {speed} chunk/s - inflight {inflight}/{target} - TPS {tps} - CPU {cpu}% - RAM {ram} MB"
