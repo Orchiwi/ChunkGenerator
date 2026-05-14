@@ -15,15 +15,16 @@ command:
   reload-failed: "&cReload failed: &7{error}"
 
   start:
-    usage: "&cUsage: &e/{label} start <world> <square|circle|rectangle> <size> [centerX centerZ]"
-    usage-rectangle: "&cUsage for rectangle: &e/{label} start <world> rectangle <halfWidth> <halfLength> [centerX centerZ]"
+    usage: "&cUsage: &e/{label} start <world> <square|circle|rectangle> <size> [centerX centerZ] [pattern]"
+    usage-rectangle: "&cUsage for rectangle: &e/{label} start <world> rectangle <halfWidth> <halfLength> [centerX centerZ] [pattern]"
     unknown-world: "&cUnknown world: &e{world}"
     unknown-shape: "&cUnknown shape &e{shape}&c. Use square, circle or rectangle."
+    unknown-pattern: "&cUnknown pattern &e{pattern}&c. Use center, edge, north, south, east or west."
     invalid-size: "&cInvalid size: &e{value}"
     invalid-coords: "&cInvalid coordinates."
     already-running: "&cA job is already running for world &e{world}&c. Use &e/{label} cancel {world}&c first."
     size-too-large: "&cSize too large (max {max} blocks)."
-    started: "&aStarted job for &e{world}&a: shape &e{shape}&a, size &e{size}&a, center &e({centerX},{centerZ})&a, target &e{total}&a chunks."
+    started: "&aStarted job for &e{world}&a: shape &e{shape}&a, size &e{size}&a, center &e({centerX},{centerZ})&a, pattern &e{pattern}&a, target &e{total}&a chunks."
 
   stop:
     usage: "&cUsage: &e/{label} stop <world>"
@@ -60,7 +61,7 @@ command:
 
   help:
     header: "&8&m            &r &bChunkGenerator commands &8&m            "
-    start: "&e/{label} start <world> <shape> <size> &8- &7Start a pre-generation job"
+    start: "&e/{label} start <world> <shape> <size> [pattern] &8- &7Start a job. Patterns: center, edge, north, south, east, west"
     stop: "&e/{label} stop <world> &8- &7Pause a job (state preserved)"
     resume: "&e/{label} resume <world> &8- &7Resume a paused job"
     cancel: "&e/{label} cancel <world> &8- &7Cancel and discard a job"

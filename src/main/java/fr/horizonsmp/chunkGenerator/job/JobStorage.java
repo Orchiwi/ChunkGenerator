@@ -1,5 +1,6 @@
 package fr.horizonsmp.chunkGenerator.job;
 
+import fr.horizonsmp.chunkGenerator.shape.TraversalPattern;
 import fr.horizonsmp.chunkGenerator.shape.ZoneDefinition;
 import fr.horizonsmp.chunkGenerator.shape.ZoneShape;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -69,6 +70,7 @@ public final class JobStorage {
         yaml.set("center-z", job.zone().centerBlockZ());
         yaml.set("half-width", job.zone().halfWidthBlocks());
         yaml.set("half-length", job.zone().halfLengthBlocks());
+        yaml.set("pattern", job.pattern().name());
         yaml.set("spiral-index", job.spiralIndex());
         yaml.set("chunks-done", job.chunksDone());
         yaml.set("total-chunks", job.totalChunks());
@@ -119,6 +121,8 @@ public final class JobStorage {
         int halfW = yaml.getInt("half-width");
         int halfL = yaml.getInt("half-length");
         ZoneDefinition zone = new ZoneDefinition(shape, cx, cz, halfW, halfL);
+        TraversalPattern pattern = TraversalPattern.fromString(yaml.getString("pattern"))
+                .orElse(TraversalPattern.CENTER);
         long spiralIndex = yaml.getLong("spiral-index");
         long chunksDone = yaml.getLong("chunks-done");
         long total = yaml.getLong("total-chunks");
@@ -137,7 +141,8 @@ public final class JobStorage {
             }
         }
         long createdAt = yaml.getLong("created-at");
-        return new PersistedJob(worldName, zone, spiralIndex, chunksDone, total, status, launcher, createdAt);
+        return new PersistedJob(worldName, zone, pattern, spiralIndex, chunksDone, total, status,
+                launcher, createdAt);
     }
 
     private static String sanitize(String worldName) {

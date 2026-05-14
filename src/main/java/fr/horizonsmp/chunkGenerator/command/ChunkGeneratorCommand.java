@@ -7,6 +7,7 @@ import fr.horizonsmp.chunkGenerator.job.JobManager;
 import fr.horizonsmp.chunkGenerator.job.JobSnapshot;
 import fr.horizonsmp.chunkGenerator.monitoring.StatsDisplay;
 import fr.horizonsmp.chunkGenerator.permission.PermissionService;
+import fr.horizonsmp.chunkGenerator.shape.TraversalPattern;
 import fr.horizonsmp.chunkGenerator.shape.ZoneDefinition;
 import fr.horizonsmp.chunkGenerator.shape.ZoneShape;
 import org.bukkit.Bukkit;
@@ -31,6 +32,7 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
 
     private static final List<String> ROOT_SUBS = List.of("start", "stop", "resume", "cancel", "status", "list", "reload", "help");
     private static final List<String> SHAPES = List.of("square", "circle", "rectangle");
+    private static final List<String> PATTERNS = List.of("center", "edge", "north", "south", "east", "west");
     private static final int MAX_HALF_BLOCKS = 50_000;
 
     private final ChunkGenerator plugin;
@@ -103,7 +105,7 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
         }
 
         UUID launcherUuid = (sender instanceof Player p) ? p.getUniqueId() : null;
-        JobManager.StartResult result = jobs.startJob(world, parsed.zone(), launcherUuid);
+        JobManager.StartResult result = jobs.startJob(world, parsed.zone(), parsed.pattern(), launcherUuid);
         if (!result.ok()) {
             if ("already-running".equals(result.error())) {
                 sender.sendMessage(messages.get("command.start.already-running",
@@ -127,6 +129,7 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
                 : parsed.zone().halfWidthBlocks() + "x" + parsed.zone().halfLengthBlocks());
         placeholders.put("centerX", String.valueOf(parsed.zone().centerBlockX()));
         placeholders.put("centerZ", String.valueOf(parsed.zone().centerBlockZ()));
+        placeholders.put("pattern", parsed.pattern().name().toLowerCase(Locale.ROOT));
         placeholders.put("total", String.valueOf(job.totalChunks()));
         sender.sendMessage(messages.get("command.start.started", placeholders));
 
@@ -139,7 +142,7 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
     }
 
     private ParsedZone parseZone(CommandSender sender, String label, ZoneShape shape, World world, String[] args) {
-        int centerArgsOffset;
+        int tailOffset;
         int halfW;
         int halfL;
         try {
@@ -151,12 +154,12 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
                 }
                 halfW = Integer.parseInt(args[3]);
                 halfL = Integer.parseInt(args[4]);
-                centerArgsOffset = 5;
+                tailOffset = 5;
             } else {
                 int radius = Integer.parseInt(args[3]);
                 halfW = radius;
                 halfL = radius;
-                centerArgsOffset = 4;
+                tailOffset = 4;
             }
         } catch (NumberFormatException e) {
             sender.sendMessage(messages.get("command.start.invalid-size",
@@ -174,23 +177,57 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
             return null;
         }
 
+        List<String> tail = new ArrayList<>();
+        for (int i = tailOffset; i < args.length; i++) {
+            tail.add(args[i]);
+        }
+
+        TraversalPattern pattern = TraversalPattern.CENTER;
+        if (!tail.isEmpty() && !isNumeric(tail.get(tail.size() - 1))) {
+            String last = tail.get(tail.size() - 1);
+            Optional<TraversalPattern> p = TraversalPattern.fromString(last);
+            if (p.isEmpty()) {
+                sender.sendMessage(messages.get("command.start.unknown-pattern",
+                        Map.of("pattern", last)));
+                return null;
+            }
+            pattern = p.get();
+            tail.remove(tail.size() - 1);
+        }
+
         int centerX;
         int centerZ;
-        if (args.length >= centerArgsOffset + 2) {
+        if (tail.isEmpty()) {
+            Location spawn = world.getSpawnLocation();
+            centerX = spawn.getBlockX();
+            centerZ = spawn.getBlockZ();
+        } else if (tail.size() == 2) {
             try {
-                centerX = Integer.parseInt(args[centerArgsOffset]);
-                centerZ = Integer.parseInt(args[centerArgsOffset + 1]);
+                centerX = Integer.parseInt(tail.get(0));
+                centerZ = Integer.parseInt(tail.get(1));
             } catch (NumberFormatException e) {
                 sender.sendMessage(messages.get("command.start.invalid-coords"));
                 return null;
             }
         } else {
-            Location spawn = world.getSpawnLocation();
-            centerX = spawn.getBlockX();
-            centerZ = spawn.getBlockZ();
+            sender.sendMessage(messages.get(shape == ZoneShape.RECTANGLE
+                            ? "command.start.usage-rectangle"
+                            : "command.start.usage",
+                    Map.of("label", label)));
+            return null;
         }
 
-        return new ParsedZone(new ZoneDefinition(shape, centerX, centerZ, halfW, halfL));
+        return new ParsedZone(new ZoneDefinition(shape, centerX, centerZ, halfW, halfL), pattern);
+    }
+
+    private static boolean isNumeric(String s) {
+        if (s == null || s.isEmpty()) return false;
+        int start = s.charAt(0) == '-' ? 1 : 0;
+        if (start == s.length()) return false;
+        for (int i = start; i < s.length(); i++) {
+            if (!Character.isDigit(s.charAt(i))) return false;
+        }
+        return true;
     }
 
     private void handleStop(CommandSender sender, String label, String[] args) {
@@ -387,6 +424,9 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
         if (args.length == 3 && sub.equals("start")) {
             return startsWith(SHAPES, args[2]);
         }
+        if (args.length >= 5 && sub.equals("start")) {
+            return startsWith(PATTERNS, args[args.length - 1]);
+        }
         return List.of();
     }
 
@@ -401,6 +441,6 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
         return out;
     }
 
-    private record ParsedZone(ZoneDefinition zone) {
+    private record ParsedZone(ZoneDefinition zone, TraversalPattern pattern) {
     }
 }

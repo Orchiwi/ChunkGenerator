@@ -6,7 +6,7 @@ import fr.horizonsmp.chunkGenerator.monitoring.PerformanceSnapshot;
 import fr.horizonsmp.chunkGenerator.monitoring.ThrottleController;
 import fr.horizonsmp.chunkGenerator.platform.PlatformAdapter;
 import fr.horizonsmp.chunkGenerator.platform.PlatformTask;
-import fr.horizonsmp.chunkGenerator.shape.ChunkSpiralIterator;
+import fr.horizonsmp.chunkGenerator.shape.TraversalPattern;
 import fr.horizonsmp.chunkGenerator.shape.ZoneDefinition;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -74,13 +74,13 @@ public final class JobManager {
         return new ArrayList<>(jobs.values());
     }
 
-    public StartResult startJob(World world, ZoneDefinition zone, UUID launcherUuid) {
+    public StartResult startJob(World world, ZoneDefinition zone, TraversalPattern pattern, UUID launcherUuid) {
         if (jobs.containsKey(world.getName())) {
             return StartResult.alreadyRunning(jobs.get(world.getName()));
         }
         long total;
         try {
-            total = new ChunkSpiralIterator(zone).countMatching();
+            total = pattern.iterator(zone).countMatching();
         } catch (RuntimeException e) {
             plugin.getLogger().warning("Failed to compute total chunks for "
                     + world.getName() + ": " + e.getMessage());
@@ -89,7 +89,7 @@ public final class JobManager {
         if (total <= 0L) {
             return StartResult.failure("zone-empty");
         }
-        GenerationJob job = new GenerationJob(world, zone, 0L, total, 0L,
+        GenerationJob job = new GenerationJob(world, zone, pattern, 0L, total, 0L,
                 launcherUuid, Instant.now().getEpochSecond());
         job.wireRuntime(plugin, platform, throttle, storage, configSupplier.get().persistence());
         jobs.put(world.getName(), job);
@@ -139,7 +139,7 @@ public final class JobManager {
                 plugin.getLogger().warning("Skipping persisted job for unknown world: " + p.worldName());
                 continue;
             }
-            GenerationJob job = new GenerationJob(world, p.zone(), p.chunksDone(),
+            GenerationJob job = new GenerationJob(world, p.zone(), p.pattern(), p.chunksDone(),
                     p.totalChunks(), p.spiralIndex(), p.launcherUuid(), p.createdAtEpochSeconds());
             job.wireRuntime(plugin, platform, throttle, storage, configSupplier.get().persistence());
             jobs.put(p.worldName(), job);

@@ -48,7 +48,7 @@ The first run drops a Paper server in `run/`; accept the EULA in
 
 | Command | Description |
 |---|---|
-| `/cg start <world> <shape> <size> [centerX centerZ]` | Start a job. `shape` ∈ `square\|circle\|rectangle`. For square/circle `size` is the radius in blocks; for rectangle pass `<halfWidth> <halfLength>`. |
+| `/cg start <world> <shape> <size> [centerX centerZ] [pattern]` | Start a job. `shape` ∈ `square\|circle\|rectangle`. For square/circle `size` is the radius in blocks; for rectangle pass `<halfWidth> <halfLength>`. `pattern` controls the visit order (default `center`). |
 | `/cg stop <world>` | Pause a running job (state preserved on disk). |
 | `/cg resume <world>` | Resume a paused job from where it left off. |
 | `/cg cancel <world>` | Cancel a job and remove its state file. |
@@ -58,6 +58,25 @@ The first run drops a Paper server in `run/`; accept the EULA in
 | `/cg help` | Print the help message. |
 
 Alias: `/chunkgen`.
+
+### Traversal patterns
+
+The `pattern` argument of `/cg start` controls the order in which
+chunks are visited within the zone; the zone shape itself is still
+chosen separately (`square` / `circle` / `rectangle`).
+
+| Pattern | Visit order |
+|---|---|
+| `center` (default) | Spiral outward from the zone center. Loads the most-used area first. |
+| `edge` | Concentric rings inward, from the outer perimeter toward the center. |
+| `north` | West-to-east row sweep starting at the north edge (smallest Z), advancing south. |
+| `south` | West-to-east row sweep starting at the south edge, advancing north. |
+| `west` | North-to-south column sweep starting at the west edge (smallest X), advancing east. |
+| `east` | North-to-south column sweep starting at the east edge, advancing west. |
+
+All patterns visit the same set of chunks (those that intersect the
+zone), only the order differs; resume after a stop/restart picks up
+in the pattern's own sequence at the saved position.
 
 ## Permissions
 

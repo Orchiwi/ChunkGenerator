@@ -6,7 +6,8 @@ import fr.horizonsmp.chunkGenerator.monitoring.ThrottleController;
 import fr.horizonsmp.chunkGenerator.platform.PlatformAdapter;
 import fr.horizonsmp.chunkGenerator.platform.PlatformTask;
 import fr.horizonsmp.chunkGenerator.shape.ChunkCoord;
-import fr.horizonsmp.chunkGenerator.shape.ChunkSpiralIterator;
+import fr.horizonsmp.chunkGenerator.shape.ChunkTraversalIterator;
+import fr.horizonsmp.chunkGenerator.shape.TraversalPattern;
 import fr.horizonsmp.chunkGenerator.shape.ZoneDefinition;
 import org.bukkit.World;
 import org.bukkit.plugin.Plugin;
@@ -22,9 +23,10 @@ public final class GenerationJob {
     private final World world;
     private final String worldName;
     private final ZoneDefinition zone;
+    private final TraversalPattern pattern;
     private final UUID launcherUuid;
     private final long createdAtEpochSeconds;
-    private final ChunkSpiralIterator iterator;
+    private final ChunkTraversalIterator iterator;
     private final AtomicLong chunksDone;
     private final long totalChunks;
     private final AtomicReference<JobStatus> status = new AtomicReference<>(JobStatus.PAUSED);
@@ -46,19 +48,21 @@ public final class GenerationJob {
 
     public GenerationJob(World world,
                          ZoneDefinition zone,
+                         TraversalPattern pattern,
                          long initialChunksDone,
                          long totalChunks,
-                         long initialSpiralIndex,
+                         long initialIteratorIndex,
                          UUID launcherUuid,
                          long createdAtEpochSeconds) {
         this.world = world;
         this.worldName = world.getName();
         this.zone = zone;
+        this.pattern = pattern;
         this.launcherUuid = launcherUuid;
         this.createdAtEpochSeconds = createdAtEpochSeconds;
-        this.iterator = new ChunkSpiralIterator(zone);
-        if (initialSpiralIndex > 0) {
-            this.iterator.seek(initialSpiralIndex);
+        this.iterator = pattern.iterator(zone);
+        if (initialIteratorIndex > 0) {
+            this.iterator.seek(initialIteratorIndex);
         }
         this.chunksDone = new AtomicLong(initialChunksDone);
         this.totalChunks = totalChunks;
@@ -204,7 +208,7 @@ public final class GenerationJob {
         lastSavedAtMs = System.currentTimeMillis();
         lastSavedChunkCount = chunksDone.get();
         storage.save(new PersistedJob(
-                worldName, zone, iterator.index(), chunksDone.get(), totalChunks,
+                worldName, zone, pattern, iterator.index(), chunksDone.get(), totalChunks,
                 persistedStatus, launcherUuid, createdAtEpochSeconds
         ));
     }
@@ -243,6 +247,10 @@ public final class GenerationJob {
 
     public ZoneDefinition zone() {
         return zone;
+    }
+
+    public TraversalPattern pattern() {
+        return pattern;
     }
 
     public UUID launcherUuid() {

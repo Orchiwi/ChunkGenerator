@@ -9,6 +9,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- **Traversal patterns** as an optional last argument to
+  `/cg start`. Six patterns are supported: `center` (default,
+  spiral outward from the zone center), `edge` (concentric rings
+  inward from the outer perimeter to the center), and `north` /
+  `south` / `east` / `west` (linear row or column sweep starting at
+  the named edge). All patterns visit the same set of chunks; only
+  the order differs, and the saved iterator index is pattern-aware
+  so a paused job resumes in its own sequence.
 - `/cg resume <world>` to restart a paused job from where it left
   off, completing the start / stop / resume / cancel quartet that
   was previously missing its resume arm — paused jobs could only be
