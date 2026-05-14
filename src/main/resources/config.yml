@@ -2,23 +2,49 @@
 # ChunkGenerator configuration
 #
 # Pre-generate world chunks in a configurable shape while keeping the
-# server TPS healthy. The throttle adapts the number of chunks loaded
-# per tick based on the observed TPS so the server stays playable.
+# server playable. The throttle drives the number of *concurrent*
+# chunk requests in flight (not chunks-per-tick) because Paper's
+# chunk system completes requests asynchronously at variable rates.
+# Keeping the request queue saturated is what turns idle CPU and RAM
+# into raw throughput.
 # =====================================================================
 
 throttle:
-  # Target TPS the auto-tuner aims to maintain. The throttle increases
-  # chunks-per-tick when TPS is above this value and decreases it
-  # otherwise.
+  # Target TPS the auto-tuner aims to maintain. The controller scales
+  # the inflight target up when TPS is comfortably above this value
+  # and down when it dips below.
   target-tps: 18.5
 
-  # Hard ceiling for chunks loaded per tick. Even on a powerful
-  # machine with stable TPS the throttle will not exceed this.
-  max-chunks-per-tick: 50.0
+  # When true, max-inflight and start-inflight are derived from
+  # availableProcessors() and maxMemory() at startup, so the plugin
+  # adapts to the host without manual tuning. Explicit non-zero
+  # values below always override the auto values.
+  auto-scale: true
 
-  # Floor for chunks loaded per tick. Going below this would make the
-  # job essentially idle.
-  min-chunks-per-tick: 0.5
+  # Ceiling on concurrent chunk requests in flight. Higher = faster
+  # but consumes more heap (each loaded chunk holds blockstates,
+  # biomes, and tile entities — roughly 3-5 MB on 1.21). Set 0 to let
+  # auto-scale pick a safe value from the JVM heap.
+  max-inflight: 0
+
+  # Floor: the throttle never drops the inflight target below this,
+  # so a single bad tick does not stall the job entirely.
+  min-inflight: 8
+
+  # Inflight target on job start. Picked aggressively so the chunk
+  # system pipeline saturates within a few seconds rather than
+  # ramping for half a minute. Set 0 to let auto-scale pick a value
+  # from the core count.
+  start-inflight: 0
+
+  # When heap usage exceeds this percent of max heap, the throttle is
+  # forced down to give the GC room to breathe.
+  memory-backoff-pct: 85.0
+
+  # Above this percent, new chunk submissions pause entirely (loads
+  # already in flight finish normally). The job resumes automatically
+  # once heap pressure clears.
+  memory-pause-pct: 92.0
 
 display:
   bossbar:

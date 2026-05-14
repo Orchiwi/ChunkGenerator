@@ -18,11 +18,7 @@ public final class ConfigLoader {
         FileConfiguration cfg = plugin.getConfig();
 
         ConfigurationSection throttleSection = section(cfg, "throttle");
-        PluginConfig.Throttle throttle = new PluginConfig.Throttle(
-                throttleSection.getDouble("target-tps", 18.5),
-                throttleSection.getDouble("max-chunks-per-tick", 50.0),
-                throttleSection.getDouble("min-chunks-per-tick", 0.5)
-        );
+        PluginConfig.Throttle throttle = readThrottle(throttleSection);
 
         ConfigurationSection displaySection = section(cfg, "display");
         ConfigurationSection bossSection = section(displaySection, "bossbar");
@@ -60,5 +56,46 @@ public final class ConfigLoader {
     private static ConfigurationSection section(ConfigurationSection cfg, String path) {
         ConfigurationSection s = cfg.getConfigurationSection(path);
         return s != null ? s : cfg.createSection(path);
+    }
+
+    private static PluginConfig.Throttle readThrottle(ConfigurationSection s) {
+        double targetTps = s.getDouble("target-tps", 18.5);
+        boolean autoScale = s.getBoolean("auto-scale", true);
+        int rawMax = s.getInt("max-inflight", 0);
+        int rawMin = s.getInt("min-inflight", 8);
+        int rawStart = s.getInt("start-inflight", 0);
+        double memBackoff = s.getDouble("memory-backoff-pct", 85.0);
+        double memPause = s.getDouble("memory-pause-pct", 92.0);
+
+        int cores = Runtime.getRuntime().availableProcessors();
+        long heapMb = Runtime.getRuntime().maxMemory() / (1024L * 1024L);
+
+        int maxInflight = rawMax > 0
+                ? rawMax
+                : autoScale
+                        ? (int) Math.min(2000L, Math.max(256L, heapMb / 5L))
+                        : 256;
+        int startInflight = rawStart > 0
+                ? rawStart
+                : autoScale
+                        ? Math.max(64, cores * 32)
+                        : 64;
+        int minInflight = Math.max(1, rawMin);
+        if (minInflight > maxInflight) {
+            minInflight = maxInflight;
+        }
+        if (startInflight < minInflight) {
+            startInflight = minInflight;
+        }
+        if (startInflight > maxInflight) {
+            startInflight = maxInflight;
+        }
+        if (memBackoff < 10.0) memBackoff = 10.0;
+        if (memBackoff > 99.0) memBackoff = 99.0;
+        if (memPause <= memBackoff) memPause = Math.min(99.0, memBackoff + 1.0);
+        if (memPause > 99.0) memPause = 99.0;
+
+        return new PluginConfig.Throttle(targetTps, autoScale, maxInflight, minInflight,
+                startInflight, memBackoff, memPause);
     }
 }

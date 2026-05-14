@@ -9,8 +9,12 @@ public record PluginConfig(
 
     public record Throttle(
             double targetTps,
-            double maxChunksPerTick,
-            double minChunksPerTick
+            boolean autoScale,
+            int maxInflight,
+            int minInflight,
+            int startInflight,
+            double memoryBackoffPercent,
+            double memoryPausePercent
     ) {
     }
 

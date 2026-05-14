@@ -6,58 +6,89 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public final class ThrottleController {
 
+    private static final int EVAL_INTERVAL_TICKS = 20;
+
     private final AtomicReference<PluginConfig.Throttle> settings;
     private final PerformanceMonitor monitor;
 
-    private volatile double chunksPerTick;
-    private double accumulator;
+    private volatile int inflightTarget;
+    private volatile boolean memoryPaused;
     private long ticksSinceLastEval;
 
     public ThrottleController(PluginConfig.Throttle initial, PerformanceMonitor monitor) {
         this.settings = new AtomicReference<>(initial);
         this.monitor = monitor;
-        this.chunksPerTick = Math.max(1.0, initial.minChunksPerTick());
+        this.inflightTarget = clamp(initial.startInflight(), initial.minInflight(), initial.maxInflight());
     }
 
     public void updateSettings(PluginConfig.Throttle next) {
         settings.set(next);
-        clampChunksPerTick();
+        inflightTarget = clamp(inflightTarget, next.minInflight(), next.maxInflight());
     }
 
-    public double chunksPerTick() {
-        return chunksPerTick;
+    public int inflightTarget() {
+        return inflightTarget;
     }
 
-    public int consumeChunksThisTick() {
-        accumulator += chunksPerTick;
-        int whole = (int) Math.floor(accumulator);
-        accumulator -= whole;
+    public boolean memoryPaused() {
+        return memoryPaused;
+    }
 
+    public int slack(int currentInflight) {
         ticksSinceLastEval++;
-        if (ticksSinceLastEval >= 20) {
+        if (ticksSinceLastEval >= EVAL_INTERVAL_TICKS) {
             ticksSinceLastEval = 0;
             adjust();
         }
-        return whole;
+        if (memoryPaused) {
+            return 0;
+        }
+        return Math.max(0, inflightTarget - currentInflight);
     }
 
     private void adjust() {
         PluginConfig.Throttle cfg = settings.get();
-        double tps = monitor.snapshot().tps();
-        if (tps >= cfg.targetTps() + 0.5) {
-            chunksPerTick = Math.min(cfg.maxChunksPerTick(), chunksPerTick * 1.2);
-        } else if (tps < cfg.targetTps()) {
-            chunksPerTick = Math.max(cfg.minChunksPerTick(), chunksPerTick * 0.8);
+        PerformanceSnapshot perf = monitor.snapshot();
+        double heap = perf.heapUsedFraction();
+
+        double pauseFrac = cfg.memoryPausePercent() / 100.0;
+        double backoffFrac = cfg.memoryBackoffPercent() / 100.0;
+
+        if (heap >= pauseFrac) {
+            memoryPaused = true;
+            inflightTarget = cfg.minInflight();
+            return;
         }
-        clampChunksPerTick();
+        memoryPaused = false;
+
+        if (heap >= backoffFrac) {
+            inflightTarget = clamp((int) Math.floor(inflightTarget * 0.7),
+                    cfg.minInflight(), cfg.maxInflight());
+            return;
+        }
+
+        double margin = perf.tps() - cfg.targetTps();
+        int next;
+        if (margin >= 1.0) {
+            next = (int) Math.floor(inflightTarget * 1.5) + 8;
+        } else if (margin >= 0.5) {
+            next = (int) Math.floor(inflightTarget * 1.2) + 4;
+        } else if (margin >= 0.0) {
+            next = inflightTarget;
+        } else if (margin >= -0.5) {
+            next = (int) Math.floor(inflightTarget * 0.85);
+        } else {
+            next = (int) Math.floor(inflightTarget * 0.6);
+        }
+        inflightTarget = clamp(next, cfg.minInflight(), cfg.maxInflight());
     }
 
-    private void clampChunksPerTick() {
-        PluginConfig.Throttle cfg = settings.get();
-        if (chunksPerTick < cfg.minChunksPerTick()) {
-            chunksPerTick = cfg.minChunksPerTick();
-        } else if (chunksPerTick > cfg.maxChunksPerTick()) {
-            chunksPerTick = cfg.maxChunksPerTick();
+    private static int clamp(int value, int min, int max) {
+        if (min > max) {
+            min = max;
         }
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
     }
 }

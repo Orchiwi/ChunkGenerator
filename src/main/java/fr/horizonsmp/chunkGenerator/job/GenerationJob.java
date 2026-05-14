@@ -19,8 +19,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public final class GenerationJob {
 
-    private static final int MAX_INFLIGHT = 200;
-
     private final World world;
     private final String worldName;
     private final ZoneDefinition zone;
@@ -120,11 +118,8 @@ public final class GenerationJob {
         if (status.get() != JobStatus.RUNNING) {
             return;
         }
-        int budget = throttle.consumeChunksThisTick();
-        for (int i = 0; i < budget; i++) {
-            if (inflight.get() >= MAX_INFLIGHT) {
-                break;
-            }
+        int slack = throttle.slack(inflight.get());
+        for (int i = 0; i < slack; i++) {
             Optional<ChunkCoord> next = iterator.next();
             if (next.isEmpty()) {
                 onComplete();
