@@ -2,7 +2,7 @@ package fr.horizonsmp.chunkGenerator.shape;
 
 import java.util.Optional;
 
-public final class ChunkSpiralIterator {
+public final class ChunkSpiralIterator implements ChunkTraversalIterator {
 
     private static final int[] DX = {1, 0, -1, 0};
     private static final int[] DZ = {0, 1, 0, -1};
