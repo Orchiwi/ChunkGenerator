@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.0-alpha.2] - 2026-05-14
+
 ### Added
 
 - Memory pressure circuit breaker on the throttle: the controller
