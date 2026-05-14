@@ -14,9 +14,34 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   submitted but not completing (slow Paper chunk worker, stuck
   futures, far-out generation) the diagnosis is obvious from one
   command.
+- README section on container hosts: `MaxRAMPercentage=95` (the
+  Pterodactyl default) leaves no room for native memory and will
+  kernel-OOM the container even when the JVM heap is far from full;
+  documents how to either drop `MaxRAMPercentage` or lower the
+  plugin's memory thresholds.
+
+### Changed
+
+- Auto-scaled `max-inflight` and `start-inflight` are now tied to
+  the core count (Paper processes 3-6 chunks in parallel per host
+  regardless of heap size) instead of the heap alone, and use a
+  conservative 30 MB/chunk transient estimate rather than 5 MB.
+  On a 6 core / 8 GB host the ceiling drops from ~1638 to ~96
+  inflight and the start target from 192 to 24 — far tighter, but
+  no slower in practice (Paper's queue past the saturation point
+  just pinned memory).
+- Default `memory-backoff-pct` lowered from 85 to 70 and
+  `memory-pause-pct` from 92 to 80 to keep a margin from the
+  container RSS limit that heap-based monitoring cannot observe
+  directly.
 
 ### Fixed
 
+- Kernel-OOM crash on container hosts (Pterodactyl, exit code 137)
+  when the throttle saturated to its old auto-scaled ceiling and
+  Paper's chunk save thread fell behind: held chunks plus native
+  memory exceeded the cgroup limit even while JVM heap stayed under
+  the old 85 % backoff threshold.
 - ETA no longer overflows to `Long.MAX_VALUE` (displayed as
   `2562047788015215h30m`) when the smoothed speed decays toward zero.
   Below 0.01 chunk/s or for predicted ETAs over a year, the throttle

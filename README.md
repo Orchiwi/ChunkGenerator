@@ -85,8 +85,10 @@ Key knobs:
   explicit non-zero values still override them.
 - `throttle.max-inflight` / `min-inflight` / `start-inflight` — hard
   limits and starting point for the adaptive inflight target (the
-  number of concurrent chunk requests in flight). Higher values use
-  more RAM but generate faster on hardware that can keep up.
+  number of concurrent chunk requests in flight). Higher does **not**
+  mean faster past a small ceiling — Paper processes 3–6 chunks in
+  parallel per host and the rest just pin memory (~15–30 MB transient
+  per chunk during decoration and lighting).
 - `throttle.memory-backoff-pct` / `memory-pause-pct` — heap pressure
   thresholds. The throttle scales down past the backoff value and
   pauses new submissions entirely past the pause value, resuming
@@ -97,6 +99,22 @@ Key knobs:
 
 All player-facing strings live in `messages.yml` with the standard `&`
 color codes; missing keys fall back to bundled defaults.
+
+### Container hosts (Pterodactyl, Docker) and `MaxRAMPercentage`
+
+ChunkGenerator's memory thresholds compare against the JVM heap
+(`Runtime.maxMemory()`), not the container RSS. Container hosts that
+launch Paper with `-XX:MaxRAMPercentage=95.0` (Pterodactyl's default)
+let the JVM grow heap to ~95 % of the cgroup limit, and the remaining
+~5 % is **not enough** for Paper's native memory, metaspace, code
+cache and NIO direct buffers — the kernel OOM-kills the container
+before any heap-percentage threshold ever trips. On such hosts:
+
+- Lower `MaxRAMPercentage` to around 75–80 (leaves ~1.5–2 GB for
+  native), or
+- Lower `throttle.memory-backoff-pct` to ~60 and
+  `memory-pause-pct` to ~70 so the plugin keeps a wider margin from
+  the cgroup ceiling.
 
 ## License
 

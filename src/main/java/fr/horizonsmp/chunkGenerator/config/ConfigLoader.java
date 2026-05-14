@@ -64,8 +64,8 @@ public final class ConfigLoader {
         int rawMax = s.getInt("max-inflight", 0);
         int rawMin = s.getInt("min-inflight", 8);
         int rawStart = s.getInt("start-inflight", 0);
-        double memBackoff = s.getDouble("memory-backoff-pct", 85.0);
-        double memPause = s.getDouble("memory-pause-pct", 92.0);
+        double memBackoff = s.getDouble("memory-backoff-pct", 70.0);
+        double memPause = s.getDouble("memory-pause-pct", 80.0);
 
         int cores = Runtime.getRuntime().availableProcessors();
         long heapMb = Runtime.getRuntime().maxMemory() / (1024L * 1024L);
@@ -73,13 +73,13 @@ public final class ConfigLoader {
         int maxInflight = rawMax > 0
                 ? rawMax
                 : autoScale
-                        ? (int) Math.min(2000L, Math.max(256L, heapMb / 5L))
-                        : 256;
+                        ? Math.max(32, (int) Math.min((long) cores * 16L, heapMb / 50L))
+                        : 64;
         int startInflight = rawStart > 0
                 ? rawStart
                 : autoScale
-                        ? Math.max(64, cores * 32)
-                        : 64;
+                        ? Math.max(8, cores * 4)
+                        : 16;
         int minInflight = Math.max(1, rawMin);
         if (minInflight > maxInflight) {
             minInflight = maxInflight;
