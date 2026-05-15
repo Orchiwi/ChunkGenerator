@@ -14,6 +14,7 @@ import fr.horizonsmp.chunkGenerator.permission.PermissionService;
 import fr.horizonsmp.chunkGenerator.platform.FoliaAdapter;
 import fr.horizonsmp.chunkGenerator.platform.PaperAdapter;
 import fr.horizonsmp.chunkGenerator.platform.PlatformAdapter;
+import fr.horizonsmp.chunkGenerator.trim.TrimManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public final class ChunkGenerator extends JavaPlugin {
     private ThrottleController throttle;
     private JobStorage jobStorage;
     private JobManager jobManager;
+    private TrimManager trimManager;
     private StatsDisplay statsDisplay;
 
     @Override
@@ -54,6 +56,9 @@ public final class ChunkGenerator extends JavaPlugin {
 
         this.jobManager = new JobManager(this, platform, throttle, performanceMonitor, jobStorage, this::pluginConfig);
         this.jobManager.start();
+
+        this.trimManager = new TrimManager(this, platform);
+        this.jobManager.setTrimActiveCheck(name -> trimManager.isActive(name));
 
         this.statsDisplay = new StatsDisplay(this, platform, jobManager, messages, this::pluginConfig);
         this.statsDisplay.start();
@@ -82,6 +87,9 @@ public final class ChunkGenerator extends JavaPlugin {
     public void onDisable() {
         if (statsDisplay != null) {
             statsDisplay.stop();
+        }
+        if (trimManager != null) {
+            trimManager.shutdown();
         }
         if (jobManager != null) {
             jobManager.shutdown();
@@ -125,6 +133,10 @@ public final class ChunkGenerator extends JavaPlugin {
 
     public JobManager jobManager() {
         return jobManager;
+    }
+
+    public TrimManager trimManager() {
+        return trimManager;
     }
 
     public StatsDisplay statsDisplay() {

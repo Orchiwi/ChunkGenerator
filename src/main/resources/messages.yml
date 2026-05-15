@@ -23,6 +23,7 @@ command:
     invalid-size: "&cInvalid size: &e{value}"
     invalid-coords: "&cInvalid coordinates."
     already-running: "&cA job is already running for world &e{world}&c. Use &e/{label} cancel {world}&c first."
+    refused-trim-active: "&cA trim is currently running on world &e{world}&c. Wait for it to finish or cancel it first."
     size-too-large: "&cSize too large (max {max} blocks)."
     started: "&aStarted job for &e{world}&a: shape &e{shape}&a, size &e{size}&a, center &e({centerX},{centerZ})&a, pattern &e{pattern}&a, target &e{total}&a chunks."
 
@@ -43,6 +44,26 @@ command:
     no-job: "&7No job to cancel for world &e{world}&7."
     cancelled: "&eJob for &e{world}&e cancelled and state file removed."
 
+  trim:
+    usage: "&cUsage: &e/{label} trim <world> <square|circle|rectangle> <size> [centerX centerZ] [--confirm]"
+    usage-rectangle: "&cUsage for rectangle: &e/{label} trim <world> rectangle <halfWidth> <halfLength> [centerX centerZ] [--confirm]"
+    unknown-world: "&cUnknown world: &e{world}"
+    unknown-shape: "&cUnknown shape &e{shape}&c. Use square, circle or rectangle."
+    invalid-size: "&cInvalid size: &e{value}"
+    invalid-coords: "&cInvalid coordinates."
+    size-too-large: "&cSize too large (max {max} blocks)."
+    preview-failed: "&cTrim preview failed: &7{error}"
+    preview-empty: "&7No chunks would be deleted for world &e{world}&7 with that zone."
+    preview: "&ePreview for &e{world}&e: &c{count}&e chunks across &c{regions}&e region files would be deleted. &7Re-run with &e--confirm&7 to execute."
+    missing-confirm: "&cNo cached preview for world &e{world}&c (or the zone differs / 60 s expired). Run &e/{label} trim {world} ...&c first (without --confirm)."
+    refused-generation-active: "&cA generation job is running on world &e{world}&c. Cancel it first."
+    refused-trim-active: "&cA trim is already running on world &e{world}&c."
+    started: "&aTrim started for &e{world}&a: deleting &e{count}&a chunks."
+    status-header: "&8&m            &r &bChunkGenerator trim &8&m            "
+    status-world: "&8│ &7World: &f{world}"
+    status-state: "&8│ &7State: &f{state}"
+    status-progress: "&8│ &7Progress: &a{percent}% &7({processed}/{total} chunks, {regions} region files)"
+
   status:
     no-job: "&7No job for world &e{world}&7."
     no-jobs: "&7No jobs registered."
@@ -58,13 +79,15 @@ command:
     empty: "&7No jobs registered."
     header: "&8&m            &r &bChunkGenerator jobs &8&m            "
     entry: "&8- &f{world} &7({state}) &7- &a{percent}% &7- &b{speed} chunk/s"
+    trim-entry: "&8- &f{world} &7(trim {state}) &7- &a{percent}% &7- &b{processed}/{total} chunks"
 
   help:
     header: "&8&m            &r &bChunkGenerator commands &8&m            "
     start: "&e/{label} start <world> <shape> <size> [pattern] &8- &7Start a job. Patterns: center, edge, north, south, east, west"
     stop: "&e/{label} stop <world> &8- &7Pause a job (state preserved)"
     resume: "&e/{label} resume <world> &8- &7Resume a paused job"
-    cancel: "&e/{label} cancel <world> &8- &7Cancel and discard a job"
+    cancel: "&e/{label} cancel <world> &8- &7Cancel and discard a job (also cancels a running trim)"
+    trim: "&e/{label} trim <world> <shape> <size> [--confirm] &8- &7Delete chunks OUTSIDE the zone (irreversible)"
     status: "&e/{label} status [world] &8- &7Show job snapshot"
     list: "&e/{label} list &8- &7List all jobs"
     reload: "&e/{label} reload &8- &7Reload the configuration"

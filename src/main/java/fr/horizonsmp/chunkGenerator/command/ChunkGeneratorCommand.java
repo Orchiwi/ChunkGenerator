@@ -10,6 +10,10 @@ import fr.horizonsmp.chunkGenerator.permission.PermissionService;
 import fr.horizonsmp.chunkGenerator.shape.TraversalPattern;
 import fr.horizonsmp.chunkGenerator.shape.ZoneDefinition;
 import fr.horizonsmp.chunkGenerator.shape.ZoneShape;
+import fr.horizonsmp.chunkGenerator.trim.TrimJob;
+import fr.horizonsmp.chunkGenerator.trim.TrimManager;
+import fr.horizonsmp.chunkGenerator.trim.TrimPlan;
+import fr.horizonsmp.chunkGenerator.trim.TrimSnapshot;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -30,19 +34,23 @@ import java.util.UUID;
 
 public final class ChunkGeneratorCommand implements CommandExecutor, TabCompleter {
 
-    private static final List<String> ROOT_SUBS = List.of("start", "stop", "resume", "cancel", "status", "list", "reload", "help");
+    private static final List<String> ROOT_SUBS = List.of("start", "stop", "resume", "cancel", "trim", "status", "list", "reload", "help");
     private static final List<String> SHAPES = List.of("square", "circle", "rectangle");
     private static final List<String> PATTERNS = List.of("center", "edge", "north", "south", "east", "west");
+    private static final List<String> TRIM_TAIL_HINTS = List.of("--confirm");
     private static final int MAX_HALF_BLOCKS = 50_000;
+    private static final UUID CONSOLE_PREVIEW_KEY = new UUID(0L, 0L);
 
     private final ChunkGenerator plugin;
     private final JobManager jobs;
+    private final TrimManager trimManager;
     private final Messages messages;
     private final PermissionService permissions;
 
     public ChunkGeneratorCommand(ChunkGenerator plugin) {
         this.plugin = plugin;
         this.jobs = plugin.jobManager();
+        this.trimManager = plugin.trimManager();
         this.messages = plugin.messages();
         this.permissions = plugin.permissionService();
     }
@@ -65,6 +73,7 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
             case "stop" -> handleStop(sender, label, args);
             case "resume" -> handleResume(sender, label, args);
             case "cancel" -> handleCancel(sender, label, args);
+            case "trim" -> handleTrim(sender, label, args);
             case "status" -> handleStatus(sender, args);
             case "list" -> handleList(sender);
             case "reload" -> handleReload(sender);
@@ -113,6 +122,9 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
             } else if ("zone-empty".equals(result.error())) {
                 sender.sendMessage(messages.get("command.start.invalid-size",
                         Map.of("value", "0")));
+            } else if ("trim-active".equals(result.error())) {
+                sender.sendMessage(messages.get("command.start.refused-trim-active",
+                        Map.of("world", worldName)));
             } else {
                 sender.sendMessage(messages.get("command.reload-failed",
                         Map.of("error", String.valueOf(result.error()))));
@@ -287,14 +299,162 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
             return;
         }
         String worldName = args[1];
-        boolean had = jobs.cancel(worldName);
-        if (!had) {
+        boolean cancelledJob = jobs.cancel(worldName);
+        boolean cancelledTrim = trimManager.cancel(worldName);
+        if (!cancelledJob && !cancelledTrim) {
             sender.sendMessage(messages.get("command.cancel.no-job",
                     Map.of("world", worldName)));
             return;
         }
         sender.sendMessage(messages.get("command.cancel.cancelled",
                 Map.of("world", worldName)));
+    }
+
+    private void handleTrim(CommandSender sender, String label, String[] args) {
+        if (!permissions.canTrim(sender)) {
+            sender.sendMessage(messages.get("command.no-permission"));
+            return;
+        }
+        if (args.length < 4) {
+            sender.sendMessage(messages.get("command.trim.usage", Map.of("label", label)));
+            return;
+        }
+        String worldName = args[1];
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) {
+            sender.sendMessage(messages.get("command.trim.unknown-world",
+                    Map.of("world", worldName)));
+            return;
+        }
+        Optional<ZoneShape> shapeOpt = ZoneShape.fromString(args[2]);
+        if (shapeOpt.isEmpty()) {
+            sender.sendMessage(messages.get("command.trim.unknown-shape",
+                    Map.of("shape", args[2])));
+            return;
+        }
+        ZoneShape shape = shapeOpt.get();
+
+        int halfW;
+        int halfL;
+        int tailOffset;
+        try {
+            if (shape == ZoneShape.RECTANGLE) {
+                if (args.length < 5) {
+                    sender.sendMessage(messages.get("command.trim.usage-rectangle",
+                            Map.of("label", label)));
+                    return;
+                }
+                halfW = Integer.parseInt(args[3]);
+                halfL = Integer.parseInt(args[4]);
+                tailOffset = 5;
+            } else {
+                int radius = Integer.parseInt(args[3]);
+                halfW = radius;
+                halfL = radius;
+                tailOffset = 4;
+            }
+        } catch (NumberFormatException e) {
+            sender.sendMessage(messages.get("command.trim.invalid-size",
+                    Map.of("value", e.getMessage())));
+            return;
+        }
+        if (halfW <= 0 || halfL <= 0) {
+            sender.sendMessage(messages.get("command.trim.invalid-size",
+                    Map.of("value", halfW + "/" + halfL)));
+            return;
+        }
+        if (halfW > MAX_HALF_BLOCKS || halfL > MAX_HALF_BLOCKS) {
+            sender.sendMessage(messages.get("command.trim.size-too-large",
+                    Map.of("max", String.valueOf(MAX_HALF_BLOCKS))));
+            return;
+        }
+
+        List<String> tail = new ArrayList<>();
+        boolean confirm = false;
+        for (int i = tailOffset; i < args.length; i++) {
+            if ("--confirm".equalsIgnoreCase(args[i])) {
+                confirm = true;
+            } else {
+                tail.add(args[i]);
+            }
+        }
+
+        int centerX;
+        int centerZ;
+        if (tail.isEmpty()) {
+            Location spawn = world.getSpawnLocation();
+            centerX = spawn.getBlockX();
+            centerZ = spawn.getBlockZ();
+        } else if (tail.size() == 2) {
+            try {
+                centerX = Integer.parseInt(tail.get(0));
+                centerZ = Integer.parseInt(tail.get(1));
+            } catch (NumberFormatException e) {
+                sender.sendMessage(messages.get("command.trim.invalid-coords"));
+                return;
+            }
+        } else {
+            sender.sendMessage(messages.get(shape == ZoneShape.RECTANGLE
+                            ? "command.trim.usage-rectangle"
+                            : "command.trim.usage",
+                    Map.of("label", label)));
+            return;
+        }
+
+        ZoneDefinition zone = new ZoneDefinition(shape, centerX, centerZ, halfW, halfL);
+        UUID senderKey = (sender instanceof Player p) ? p.getUniqueId() : CONSOLE_PREVIEW_KEY;
+
+        if (jobs.get(worldName).isPresent()) {
+            sender.sendMessage(messages.get("command.trim.refused-generation-active",
+                    Map.of("world", worldName)));
+            return;
+        }
+        if (trimManager.isActive(worldName)) {
+            sender.sendMessage(messages.get("command.trim.refused-trim-active",
+                    Map.of("world", worldName)));
+            return;
+        }
+
+        if (!confirm) {
+            TrimManager.PreviewResult preview = trimManager.preview(world, zone);
+            if (!preview.ok()) {
+                sender.sendMessage(messages.get("command.trim.preview-failed",
+                        Map.of("error", String.valueOf(preview.error()))));
+                return;
+            }
+            TrimPlan plan = preview.plan();
+            if (plan.chunksAffected() == 0L && plan.regionFilesAffected() == 0L) {
+                sender.sendMessage(messages.get("command.trim.preview-empty",
+                        Map.of("world", worldName)));
+                return;
+            }
+            trimManager.cacheForSender(senderKey, plan);
+            Map<String, String> map = new HashMap<>();
+            map.put("world", worldName);
+            map.put("count", String.valueOf(plan.chunksAffected()));
+            map.put("regions", String.valueOf(plan.regionFilesAffected()));
+            map.put("label", label);
+            sender.sendMessage(messages.get("command.trim.preview", map));
+            return;
+        }
+
+        Optional<TrimPlan> cached = trimManager.takeCachedPlan(senderKey, worldName, zone);
+        if (cached.isEmpty()) {
+            sender.sendMessage(messages.get("command.trim.missing-confirm",
+                    Map.of("world", worldName, "label", label)));
+            return;
+        }
+        TrimManager.StartResult result = trimManager.start(world, cached.get(),
+                (sender instanceof Player p) ? p.getUniqueId() : null);
+        if (!result.ok()) {
+            sender.sendMessage(messages.get("command.trim.refused-trim-active",
+                    Map.of("world", worldName)));
+            return;
+        }
+        Map<String, String> map = new HashMap<>();
+        map.put("world", worldName);
+        map.put("count", String.valueOf(cached.get().chunksAffected()));
+        sender.sendMessage(messages.get("command.trim.started", map));
     }
 
     private void handleStatus(CommandSender sender, String[] args) {
@@ -305,22 +465,42 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
         if (args.length >= 2) {
             String worldName = args[1];
             Optional<GenerationJob> job = jobs.get(worldName);
-            if (job.isEmpty()) {
+            Optional<TrimJob> trim = trimManager.get(worldName);
+            if (job.isEmpty() && trim.isEmpty()) {
                 sender.sendMessage(messages.get("command.status.no-job",
                         Map.of("world", worldName)));
                 return;
             }
-            sendStatusLines(sender, jobs.snapshotOf(job.get()));
+            job.ifPresent(g -> sendStatusLines(sender, jobs.snapshotOf(g)));
+            trim.ifPresent(t -> sendTrimStatusLines(sender, t.snapshot()));
             return;
         }
-        List<GenerationJob> all = jobs.jobs();
-        if (all.isEmpty()) {
+        List<GenerationJob> allJobs = jobs.jobs();
+        List<TrimJob> allTrims = trimManager.trims();
+        if (allJobs.isEmpty() && allTrims.isEmpty()) {
             sender.sendMessage(messages.get("command.status.no-jobs"));
             return;
         }
-        for (GenerationJob job : all) {
+        for (GenerationJob job : allJobs) {
             sendStatusLines(sender, jobs.snapshotOf(job));
         }
+        for (TrimJob job : allTrims) {
+            sendTrimStatusLines(sender, job.snapshot());
+        }
+    }
+
+    private void sendTrimStatusLines(CommandSender sender, TrimSnapshot snap) {
+        Map<String, String> map = new HashMap<>();
+        map.put("world", snap.worldName());
+        map.put("state", snap.status().name());
+        map.put("processed", String.valueOf(snap.chunksProcessed()));
+        map.put("total", String.valueOf(snap.totalChunks()));
+        map.put("percent", StatsDisplay.formatPercent(snap.progressPercent()));
+        map.put("regions", String.valueOf(snap.regionFilesAffected()));
+        sender.sendMessage(messages.get("command.trim.status-header"));
+        sender.sendMessage(messages.get("command.trim.status-world", map));
+        sender.sendMessage(messages.get("command.trim.status-state", map));
+        sender.sendMessage(messages.get("command.trim.status-progress", map));
     }
 
     private void sendStatusLines(CommandSender sender, JobSnapshot snap) {
@@ -357,13 +537,14 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
             sender.sendMessage(messages.get("command.no-permission"));
             return;
         }
-        List<GenerationJob> all = jobs.jobs();
-        if (all.isEmpty()) {
+        List<GenerationJob> allJobs = jobs.jobs();
+        List<TrimJob> allTrims = trimManager.trims();
+        if (allJobs.isEmpty() && allTrims.isEmpty()) {
             sender.sendMessage(messages.get("command.list.empty"));
             return;
         }
         sender.sendMessage(messages.get("command.list.header"));
-        for (GenerationJob job : all) {
+        for (GenerationJob job : allJobs) {
             JobSnapshot snap = jobs.snapshotOf(job);
             Map<String, String> map = new HashMap<>();
             map.put("world", snap.worldName());
@@ -371,6 +552,16 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
             map.put("percent", StatsDisplay.formatPercent(snap.progressPercent()));
             map.put("speed", StatsDisplay.formatSpeed(snap.chunksPerSecond()));
             sender.sendMessage(messages.get("command.list.entry", map));
+        }
+        for (TrimJob trim : allTrims) {
+            TrimSnapshot snap = trim.snapshot();
+            Map<String, String> map = new HashMap<>();
+            map.put("world", snap.worldName());
+            map.put("state", snap.status().name());
+            map.put("percent", StatsDisplay.formatPercent(snap.progressPercent()));
+            map.put("processed", String.valueOf(snap.chunksProcessed()));
+            map.put("total", String.valueOf(snap.totalChunks()));
+            sender.sendMessage(messages.get("command.list.trim-entry", map));
         }
     }
 
@@ -396,6 +587,7 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
         sender.sendMessage(messages.get("command.help.stop", placeholders));
         sender.sendMessage(messages.get("command.help.resume", placeholders));
         sender.sendMessage(messages.get("command.help.cancel", placeholders));
+        sender.sendMessage(messages.get("command.help.trim", placeholders));
         sender.sendMessage(messages.get("command.help.status", placeholders));
         sender.sendMessage(messages.get("command.help.list", placeholders));
         sender.sendMessage(messages.get("command.help.reload", placeholders));
@@ -414,18 +606,22 @@ public final class ChunkGeneratorCommand implements CommandExecutor, TabComplete
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (args.length == 2 && (sub.equals("start") || sub.equals("stop")
-                || sub.equals("resume") || sub.equals("cancel") || sub.equals("status"))) {
+                || sub.equals("resume") || sub.equals("cancel") || sub.equals("trim")
+                || sub.equals("status"))) {
             List<String> worldNames = new ArrayList<>();
             for (World w : Bukkit.getWorlds()) {
                 worldNames.add(w.getName());
             }
             return startsWith(worldNames, args[1]);
         }
-        if (args.length == 3 && sub.equals("start")) {
+        if (args.length == 3 && (sub.equals("start") || sub.equals("trim"))) {
             return startsWith(SHAPES, args[2]);
         }
         if (args.length >= 5 && sub.equals("start")) {
             return startsWith(PATTERNS, args[args.length - 1]);
+        }
+        if (args.length >= 5 && sub.equals("trim")) {
+            return startsWith(TRIM_TAIL_HINTS, args[args.length - 1]);
         }
         return List.of();
     }

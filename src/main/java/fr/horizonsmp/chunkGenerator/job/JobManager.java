@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public final class JobManager {
@@ -31,6 +32,7 @@ public final class JobManager {
     private final Supplier<PluginConfig> configSupplier;
 
     private final ConcurrentMap<String, GenerationJob> jobs = new ConcurrentHashMap<>();
+    private volatile Predicate<String> trimActiveCheck = name -> false;
     private PlatformTask sampler;
 
     public JobManager(JavaPlugin plugin,
@@ -74,9 +76,16 @@ public final class JobManager {
         return new ArrayList<>(jobs.values());
     }
 
+    public void setTrimActiveCheck(Predicate<String> check) {
+        this.trimActiveCheck = check != null ? check : name -> false;
+    }
+
     public StartResult startJob(World world, ZoneDefinition zone, TraversalPattern pattern, UUID launcherUuid) {
         if (jobs.containsKey(world.getName())) {
             return StartResult.alreadyRunning(jobs.get(world.getName()));
+        }
+        if (trimActiveCheck.test(world.getName())) {
+            return StartResult.failure("trim-active");
         }
         long total;
         try {

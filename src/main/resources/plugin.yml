@@ -27,6 +27,7 @@ permissions:
       chunkgenerator.command.stop: true
       chunkgenerator.command.resume: true
       chunkgenerator.command.cancel: true
+      chunkgenerator.command.trim: true
       chunkgenerator.command.status: true
       chunkgenerator.command.list: true
       chunkgenerator.command.reload: true
@@ -42,6 +43,9 @@ permissions:
     default: op
   chunkgenerator.command.cancel:
     description: Allows cancelling and discarding chunk pre-generation jobs.
+    default: op
+  chunkgenerator.command.trim:
+    description: Allows deleting chunks outside a zone (irreversible).
     default: op
   chunkgenerator.command.status:
     description: Allows querying chunk pre-generation status.
