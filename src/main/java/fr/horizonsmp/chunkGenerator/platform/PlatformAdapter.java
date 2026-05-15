@@ -13,4 +13,6 @@ public interface PlatformAdapter {
     PlatformTask scheduleAsyncTask(Runnable runnable, long initialDelayMs, long periodMs);
 
     CompletableFuture<Void> loadChunkAsync(World world, int chunkX, int chunkZ);
+
+    void runOnMain(Runnable runnable);
 }

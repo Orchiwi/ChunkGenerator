@@ -39,4 +39,13 @@ public final class PaperAdapter implements PlatformAdapter {
     public CompletableFuture<Void> loadChunkAsync(World world, int chunkX, int chunkZ) {
         return world.getChunkAtAsync(chunkX, chunkZ, true).thenApply(c -> null);
     }
+
+    @Override
+    public void runOnMain(Runnable runnable) {
+        if (Bukkit.isPrimaryThread()) {
+            runnable.run();
+        } else {
+            Bukkit.getScheduler().runTask(plugin, runnable);
+        }
+    }
 }

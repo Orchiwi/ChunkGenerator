@@ -21,6 +21,7 @@ public final class FoliaAdapter implements PlatformAdapter {
     private final Object globalRegionScheduler;
     private final Object asyncScheduler;
     private final Method globalRunAtFixedRate;
+    private final Method globalExecute;
     private final Method asyncRunAtFixedRate;
     private final Method taskCancel;
 
@@ -33,6 +34,8 @@ public final class FoliaAdapter implements PlatformAdapter {
 
         this.globalRunAtFixedRate = globalRegionScheduler.getClass()
                 .getMethod("runAtFixedRate", Plugin.class, Consumer.class, long.class, long.class);
+        this.globalExecute = globalRegionScheduler.getClass()
+                .getMethod("execute", Plugin.class, Runnable.class);
         this.asyncRunAtFixedRate = asyncScheduler.getClass()
                 .getMethod("runAtFixedRate", Plugin.class, Consumer.class, long.class, long.class, TimeUnit.class);
 
@@ -72,6 +75,15 @@ public final class FoliaAdapter implements PlatformAdapter {
     @Override
     public CompletableFuture<Void> loadChunkAsync(World world, int chunkX, int chunkZ) {
         return world.getChunkAtAsync(chunkX, chunkZ, true).thenApply(c -> null);
+    }
+
+    @Override
+    public void runOnMain(Runnable runnable) {
+        try {
+            globalExecute.invoke(globalRegionScheduler, plugin, runnable);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to dispatch to Folia global region scheduler", e);
+        }
     }
 
     private PlatformTask wrapTask(Object scheduled) {
