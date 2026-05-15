@@ -7,6 +7,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- **Skip-already-generated chunks.** During a pre-generation pass,
+  the iterator now checks `World.isChunkGenerated(x, z)` (region
+  file header only, no chunk load) before submitting each coord to
+  Paper's chunk system. Chunks already on disk count toward
+  `chunksDone` for free, with no inflight slot consumed. A cap of
+  32 skips per tick keeps the main thread responsive in the cold-
+  cache edge case (worst-case ~160 ms recovery on the next tick).
+  Typical impact: re-running a job over a partially explored map
+  completes near-instantly instead of paying ~50× the disk I/O of
+  the original generation.
+
 ## [0.1.0-beta.1] - 2026-05-15
 
 First beta release after a round of production tuning on real

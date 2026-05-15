@@ -20,6 +20,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public final class GenerationJob {
 
+    private static final int MAX_SKIP_PER_TICK = 32;
+
     private final World world;
     private final String worldName;
     private final ZoneDefinition zone;
@@ -123,6 +125,7 @@ public final class GenerationJob {
             return;
         }
         int slack = throttle.slack(inflight.get());
+        int skippedThisTick = 0;
         for (int i = 0; i < slack; i++) {
             Optional<ChunkCoord> next = iterator.next();
             if (next.isEmpty()) {
@@ -130,6 +133,17 @@ public final class GenerationJob {
                 return;
             }
             ChunkCoord cc = next.get();
+
+            if (world.isChunkGenerated(cc.x(), cc.z())) {
+                chunksDone.incrementAndGet();
+                skippedThisTick++;
+                if (skippedThisTick >= MAX_SKIP_PER_TICK) {
+                    break;
+                }
+                i--;
+                continue;
+            }
+
             inflight.incrementAndGet();
             platform.loadChunkAsync(world, cc.x(), cc.z()).whenComplete((unused, ex) -> {
                 inflight.decrementAndGet();
