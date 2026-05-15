@@ -9,6 +9,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- **`/cg trim <world> <shape> <size> [centerX centerZ] [--confirm]`**
+  to delete chunks **outside** a zone, freeing disk after a world
+  border move or similar map-shrink operation. Two-step UX: without
+  `--confirm` the command previews the chunk count and region-file
+  count, caches the plan for 60 s, then a second invocation with
+  `--confirm` executes it. Trim runs on a dedicated single-thread
+  executor, unloads each affected chunk on the main thread before
+  touching the region file, and is mutually exclusive with a
+  generation job on the same world (in either direction). Tracked
+  as a TrimJob — visible in `/cg status` and `/cg list`,
+  cancellable via `/cg cancel`. New permission node
+  `chunkgenerator.command.trim`.
 - **Skip-already-generated chunks.** During a pre-generation pass,
   the iterator now checks `World.isChunkGenerated(x, z)` (region
   file header only, no chunk load) before submitting each coord to

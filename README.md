@@ -51,7 +51,8 @@ The first run drops a Paper server in `run/`; accept the EULA in
 | `/cg start <world> <shape> <size> [centerX centerZ] [pattern]` | Start a job. `shape` ∈ `square\|circle\|rectangle`. For square/circle `size` is the radius in blocks; for rectangle pass `<halfWidth> <halfLength>`. `pattern` controls the visit order (default `center`). |
 | `/cg stop <world>` | Pause a running job (state preserved on disk). |
 | `/cg resume <world>` | Resume a paused job from where it left off. |
-| `/cg cancel <world>` | Cancel a job and remove its state file. |
+| `/cg cancel <world>` | Cancel a job and remove its state file (also cancels a running trim on that world). |
+| `/cg trim <world> <shape> <size> [centerX centerZ] [--confirm]` | Delete chunks **outside** the zone. Without `--confirm` only previews the count. **Irreversible.** |
 | `/cg status [world]` | Show a snapshot of progress, speed, ETA, TPS, CPU and RAM. |
 | `/cg list` | List all known jobs (running and paused). |
 | `/cg reload` | Reload `config.yml` and `messages.yml`. |
@@ -87,6 +88,7 @@ in the pattern's own sequence at the saved position.
 | `chunkgenerator.command.stop` | op | Pause jobs. |
 | `chunkgenerator.command.resume` | op | Resume paused jobs. |
 | `chunkgenerator.command.cancel` | op | Cancel jobs. |
+| `chunkgenerator.command.trim` | op | Delete chunks outside a zone (irreversible). |
 | `chunkgenerator.command.status` | op | Query job status. |
 | `chunkgenerator.command.list` | op | List jobs. |
 | `chunkgenerator.command.reload` | op | Reload config. |
